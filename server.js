@@ -132,30 +132,31 @@ const server = http.createServer((req, res) => {
   const filePath = path.join(PUBLIC_DIR, safePath);
 
   fs.stat(filePath, (err, stats) => {
-    if (err || !stats.isFile()) {
-      const indexPath = path.join(PUBLIC_DIR, "index.html");
-      fs.readFile(indexPath, (readErr, content) => {
-        if (readErr) {
-          res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-          return res.end("404 - Không tìm thấy trang");
-        }
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(content);
+  if (err || !stats.isFile()) {
+    res.writeHead(404, {
+      "Content-Type": "text/plain; charset=utf-8"
+    });
+    return res.end("404 - Không tìm thấy tệp");
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType =
+    MIME_TYPES[ext] || "application/octet-stream";
+
+  fs.readFile(filePath, (readErr, content) => {
+    if (readErr) {
+      res.writeHead(500, {
+        "Content-Type": "text/plain; charset=utf-8"
       });
-      return;
+      return res.end("500 - Lỗi đọc tệp");
     }
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || "application/octet-stream";
-
-    fs.readFile(filePath, (readErr, content) => {
-      if (readErr) {
-        res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
-        return res.end("500 - Lỗi đọc tệp");
-      }
-      res.writeHead(200, { "Content-Type": contentType });
-      res.end(content);
+    res.writeHead(200, {
+      "Content-Type": contentType
     });
+
+    res.end(content);
+  });
   });
 });
 
