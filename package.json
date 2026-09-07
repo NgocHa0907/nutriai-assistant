@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "NutriAI - Smart Calorie & Health Assistant",
   "scripts": {
-    "start": "node local-server.js",
-    "build": "echo 'Static build ready'"
+    "start": "node local-server.js"
   },
   "keywords": [
     "ai",
