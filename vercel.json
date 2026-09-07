@@ -19,7 +19,7 @@
       ]
     }
   ],
-  "buildCommand": false,
+  "buildCommand": "",
   "outputDirectory": ".",
   "rewrites": [
     {
