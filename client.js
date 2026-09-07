@@ -143,6 +143,16 @@ function getTodayDateString() {
   return `${year}-${month}-${day}`;
 }
 
+function shiftDateString(dateStr, offsetDays) {
+  const parts = (dateStr || getTodayDateString()).split("-").map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  d.setDate(d.getDate() + offsetDays);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function loadApiConfig() {
   const saved = safeStorage.getItem(STORAGE_KEYS.API_CONFIG);
   if (saved) {
@@ -1070,13 +1080,24 @@ function renderHealthTracker() {
   const dateStr = state.selectedDate;
   const dayLog = getDailyLog(dateStr);
 
+  const isToday = dateStr === getTodayDateString();
+
+  const btnDateToday = document.getElementById("btn-date-today");
+  if (btnDateToday) {
+    if (isToday) {
+      btnDateToday.classList.add("active");
+    } else {
+      btnDateToday.classList.remove("active");
+    }
+  }
+
   const datePicker = document.getElementById("health-date-picker");
   if (datePicker) datePicker.value = dateStr;
 
   const displayDateTitle = document.getElementById("display-date-title");
   if (displayDateTitle) {
-    const isToday = dateStr === getTodayDateString();
-    const parsedDate = new Date(dateStr + "T00:00:00");
+    const parts = dateStr.split("-").map(Number);
+    const parsedDate = new Date(parts[0], parts[1] - 1, parts[2]);
     const dateFormatted = parsedDate.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
     displayDateTitle.textContent = isToday ? `Hôm nay, ${parsedDate.toLocaleDateString("vi-VN")}` : dateFormatted;
   }
@@ -1317,7 +1338,8 @@ function renderHistoryChart() {
   const bmr = calculateBMR(profile.weight, profile.height, profile.age, profile.gender);
 
   const days = [];
-  const curr = new Date(state.selectedDate + "T00:00:00");
+  const currParts = (state.selectedDate || getTodayDateString()).split("-").map(Number);
+  const curr = new Date(currParts[0], currParts[1] - 1, currParts[2]);
   for (let i = 6; i >= 0; i--) {
     const d = new Date(curr);
     d.setDate(d.getDate() - i);
@@ -1630,18 +1652,14 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
 
   if (btnDatePrev) {
     btnDatePrev.addEventListener("click", () => {
-      const d = new Date(state.selectedDate + "T00:00:00");
-      d.setDate(d.getDate() - 1);
-      state.selectedDate = d.toISOString().split("T")[0];
+      state.selectedDate = shiftDateString(state.selectedDate, -1);
       renderHealthTracker();
     });
   }
 
   if (btnDateNext) {
     btnDateNext.addEventListener("click", () => {
-      const d = new Date(state.selectedDate + "T00:00:00");
-      d.setDate(d.getDate() + 1);
-      state.selectedDate = d.toISOString().split("T")[0];
+      state.selectedDate = shiftDateString(state.selectedDate, 1);
       renderHealthTracker();
     });
   }

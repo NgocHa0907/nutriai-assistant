@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    AI Health & Calorie Assistant - Modern Design System
    ========================================================================== */
 
@@ -353,6 +353,12 @@ body {
 .btn-subtle:hover {
   background: var(--border-color);
   color: var(--text-primary);
+}
+
+.btn-subtle.active {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border-color: var(--accent-primary);
 }
 
 .chat-messages {
