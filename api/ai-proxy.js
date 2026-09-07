@@ -1,8 +1,34 @@
 const https = require("https");
 const http = require("http");
 
+function parseBody(req) {
+  return new Promise(resolve => {
+    if (req.body) {
+      if (typeof req.body === "string") {
+        try {
+          return resolve(JSON.parse(req.body));
+        } catch (e) {
+          return resolve({});
+        }
+      }
+      return resolve(req.body);
+    }
+    let data = "";
+    req.on("data", chunk => {
+      data += chunk;
+    });
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(data || "{}"));
+      } catch (e) {
+        resolve({});
+      }
+    });
+    req.on("error", () => resolve({}));
+  });
+}
+
 module.exports = async (req, res) => {
-  // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-goog-api-key");
@@ -14,36 +40,20 @@ module.exports = async (req, res) => {
 
   if (req.method !== "POST") {
     res.statusCode = 405;
-    res.setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ error: "Method Not Allowed" }));
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.end(JSON.stringify({ error: "Chỉ hỗ trợ phương thức POST" }));
   }
 
   try {
-    let payload = req.body;
-    if (typeof payload === "string") {
-      try {
-        payload = JSON.parse(payload);
-      } catch (e) {}
-    } else if (!payload || typeof payload !== "object") {
-      let raw = "";
-      for await (const chunk of req) {
-        raw += chunk;
-      }
-      try {
-        payload = JSON.parse(raw);
-      } catch (e) {
-        payload = {};
-      }
-    }
-
+    const payload = await parseBody(req);
     const targetUrl = payload.targetUrl;
     const customHeaders = payload.headers || {};
     const requestData = JSON.stringify(payload.data || {});
 
     if (!targetUrl) {
       res.statusCode = 400;
-      res.setHeader("Content-Type", "application/json");
-      return res.end(JSON.stringify({ error: "Missing targetUrl parameter" }));
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      return res.end(JSON.stringify({ error: "Thiếu tham số targetUrl" }));
     }
 
     const parsedUrl = new URL(targetUrl);
@@ -64,7 +74,7 @@ module.exports = async (req, res) => {
       path: parsedUrl.pathname + parsedUrl.search,
       method: "POST",
       headers: forwardedHeaders,
-      timeout: 30000
+      timeout: 25000
     };
 
     const proxyReq = transport.request(proxyReqOptions, proxyRes => {
@@ -75,7 +85,7 @@ module.exports = async (req, res) => {
 
       proxyRes.on("end", () => {
         res.statusCode = proxyRes.statusCode || 200;
-        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Content-Type", "application/json; charset=utf-8");
         res.end(responseBody);
       });
     });
@@ -83,22 +93,22 @@ module.exports = async (req, res) => {
     proxyReq.on("error", err => {
       console.error("Proxy error:", err.message);
       res.statusCode = 502;
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: "Lỗi kết nối máy chủ AI: " + err.message }));
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ error: "Lỗi kết nối tới AI API: " + err.message }));
     });
 
     proxyReq.on("timeout", () => {
       proxyReq.destroy();
       res.statusCode = 504;
-      res.setHeader("Content-Type", "application/json");
-      res.end(JSON.stringify({ error: "Hết thời gian chờ phản hồi từ máy chủ AI (Timeout)" }));
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.end(JSON.stringify({ error: "Hết thời gian chờ phản hồi từ AI API (Timeout)" }));
     });
 
     proxyReq.write(requestData);
     proxyReq.end();
   } catch (err) {
     res.statusCode = 400;
-    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.end(JSON.stringify({ error: "Dữ liệu yêu cầu không hợp lệ: " + err.message }));
   }
 };

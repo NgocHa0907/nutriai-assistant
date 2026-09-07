@@ -2,11 +2,17 @@
   "name": "ai-health-calorie-assistant",
   "version": "1.0.0",
   "description": "AI Health and Calorie Tracker Assistant",
-  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "keywords": ["ai", "nutrition", "calorie-tracker", "bmr", "tdee", "openai"],
+  "keywords": [
+    "ai",
+    "nutrition",
+    "calorie-tracker",
+    "bmr",
+    "tdee",
+    "gemini"
+  ],
   "author": "",
   "license": "MIT"
 }
