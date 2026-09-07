@@ -165,8 +165,18 @@
 
             <div class="current-date-title" id="display-date-title">Hôm nay</div>
 
-            <div>
-              <input type="date" id="health-date-picker" class="date-input-control">
+            <div class="calendar-picker-wrapper">
+              <button type="button" id="btn-open-calendar" class="btn-calendar-trigger" title="Mở lịch chọn ngày & theo dõi calo chi tiết">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span id="calendar-trigger-date">07/09/2026</span>
+                <span id="calendar-trigger-badge" class="trigger-badge-net">0 kcal</span>
+              </button>
+              <input type="date" id="health-date-picker" class="date-input-control" style="display:none;">
             </div>
           </div>
 
@@ -740,6 +750,82 @@
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <button id="btn-goto-api-tab" class="btn-subtle">Đi tới trang Cài Đặt API để sửa</button>
         <button id="btn-close-prompt-modal-2" class="btn-primary">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Canvas / Offcanvas Datepicker theo dõi Calo -->
+  <div id="modal-calorie-calendar" class="modal-overlay">
+    <div class="modal-card calendar-modal-card">
+      <div class="calendar-modal-header">
+        <div class="calendar-nav-title">
+          <button type="button" id="btn-cal-prev-month" class="btn-cal-nav" title="Tháng trước">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <span id="calendar-month-year-label" class="calendar-current-month">Tháng 9, 2026</span>
+          <button type="button" id="btn-cal-next-month" class="btn-cal-nav" title="Tháng sau">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+        <div class="calendar-header-actions">
+          <button type="button" id="btn-cal-today" class="btn-subtle" title="Về hôm nay">Hôm nay</button>
+          <button type="button" id="btn-close-calendar-modal" class="modal-close-btn" title="Đóng lịch">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Month Calorie Sparkline/Canvas Bar -->
+      <div class="calendar-canvas-section">
+        <div class="calendar-canvas-header">
+          <span>Biểu đồ Calo Ròng Trong Tháng (HTML5 Canvas)</span>
+          <span id="calendar-canvas-summary">Tháng 9</span>
+        </div>
+        <canvas id="calendar-month-canvas" height="52"></canvas>
+      </div>
+
+      <!-- Monthly Summary Chips -->
+      <div class="calendar-month-summary">
+        <div class="cal-summary-chip chip-deficit">
+          <span class="chip-dot"></span>
+          <span class="chip-label">Thâm hụt (Đốt mỡ):</span>
+          <strong id="cal-summary-deficit-days">0 ngày</strong>
+        </div>
+        <div class="cal-summary-chip chip-surplus">
+          <span class="chip-dot"></span>
+          <span class="chip-label">Thặng dư (Tăng cân):</span>
+          <strong id="cal-summary-surplus-days">0 ngày</strong>
+        </div>
+        <div class="cal-summary-chip chip-balanced">
+          <span class="chip-dot"></span>
+          <span class="chip-label">Trung bình ròng:</span>
+          <strong id="cal-summary-avg-net">0 kcal</strong>
+        </div>
+      </div>
+
+      <!-- Calendar Weekday Header -->
+      <div class="calendar-weekdays">
+        <div>T2</div>
+        <div>T3</div>
+        <div>T4</div>
+        <div>T5</div>
+        <div>T6</div>
+        <div>T7</div>
+        <div style="color:var(--color-danger);">CN</div>
+      </div>
+
+      <!-- Calendar Days Grid -->
+      <div id="calendar-days-grid" class="calendar-days-grid">
+        <!-- Rendered dynamically by client.js -->
+      </div>
+
+      <div class="calendar-modal-footer">
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-badge deficit">-350</span> Thâm hụt calo</span>
+          <span class="legend-item"><span class="legend-badge surplus">+250</span> Thặng dư calo</span>
+          <span class="legend-item"><span class="legend-badge balanced">±0</span> Cân bằng</span>
+        </div>
+        <button type="button" id="btn-close-calendar-modal-2" class="btn-secondary" style="padding:0.4rem 1rem; font-size:0.82rem;">Đóng</button>
       </div>
     </div>
   </div>

@@ -1094,6 +1094,13 @@ function renderHealthTracker() {
   const datePicker = document.getElementById("health-date-picker");
   if (datePicker) datePicker.value = dateStr;
 
+  const triggerDate = document.getElementById("calendar-trigger-date");
+  if (triggerDate) {
+    const parts = dateStr.split("-").map(Number);
+    const dObj = new Date(parts[0], parts[1] - 1, parts[2]);
+    triggerDate.textContent = dObj.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
   const displayDateTitle = document.getElementById("display-date-title");
   if (displayDateTitle) {
     const parts = dateStr.split("-").map(Number);
@@ -1209,9 +1216,31 @@ function renderHealthTracker() {
     }
   }
 
+  const triggerBadge = document.getElementById("calendar-trigger-badge");
+  if (triggerBadge) {
+    const dayStats = getDayCalorieStats(dateStr);
+    if (dayStats.hasData) {
+      triggerBadge.textContent = (dayStats.netBalance > 0 ? "+" : "") + dayStats.netBalance.toLocaleString("vi-VN") + " kcal";
+      if (dayStats.netBalance < -100) {
+        triggerBadge.className = "trigger-badge-net deficit";
+      } else if (dayStats.netBalance > 100) {
+        triggerBadge.className = "trigger-badge-net surplus";
+      } else {
+        triggerBadge.className = "trigger-badge-net balanced";
+      }
+    } else {
+      triggerBadge.textContent = "Chưa có log";
+      triggerBadge.className = "trigger-badge-net empty";
+    }
+  }
+
   renderActivityList(dayLog.activities || []);
   renderMealBlocks(dayLog.meals || {});
   renderHistoryChart();
+
+  if (typeof calendarState !== "undefined" && calendarState.isOpen) {
+    renderCalorieCalendar();
+  }
 }
 
 function renderActivityList(activities) {
@@ -1576,6 +1605,312 @@ function closePromptViewModal() {
 }
 
 // =============================================================================
+// 9.5. CUSTOM CALORIE DATEPICKER & CANVAS CALENDAR
+// =============================================================================
+const calendarState = {
+  viewingYear: new Date().getFullYear(),
+  viewingMonth: new Date().getMonth(), // 0-indexed: 0 = Jan, 11 = Dec
+  isOpen: false
+};
+
+let currentMonthChartData = [];
+
+function getDayCalorieStats(dateStr) {
+  const profile = state.profile;
+  const bmr = calculateBMR(profile.weight, profile.height, profile.age, profile.gender);
+  const dayLog = state.dailyLogs[dateStr];
+
+  if (!dayLog) {
+    return {
+      hasData: false,
+      intake: 0,
+      activityBurn: 0,
+      totalBurned: bmr,
+      netBalance: 0
+    };
+  }
+
+  let totalIntake = 0;
+  let hasFood = false;
+  const mealKeys = ["breakfast", "lunch", "dinner", "snack"];
+  mealKeys.forEach(mKey => {
+    (dayLog.meals?.[mKey] || []).forEach(item => {
+      totalIntake += (item.calories || 0);
+      hasFood = true;
+    });
+  });
+
+  const activities = dayLog.activities || [];
+  const totalActivityBurn = activities.reduce((sum, act) => sum + (act.calories || 0), 0);
+  const hasActivity = activities.length > 0;
+  const hasData = hasFood || hasActivity;
+
+  const totalBurned = bmr + totalActivityBurn;
+  const netBalance = hasData ? (totalIntake - totalBurned) : 0;
+
+  return {
+    hasData,
+    intake: totalIntake,
+    activityBurn: totalActivityBurn,
+    totalBurned,
+    netBalance
+  };
+}
+
+function openCalorieCalendar() {
+  const modal = document.getElementById("modal-calorie-calendar");
+  if (!modal) return;
+  const parts = (state.selectedDate || getTodayDateString()).split("-").map(Number);
+  calendarState.viewingYear = parts[0];
+  calendarState.viewingMonth = parts[1] - 1;
+  calendarState.isOpen = true;
+  modal.classList.add("open");
+  renderCalorieCalendar();
+}
+
+function closeCalorieCalendar() {
+  const modal = document.getElementById("modal-calorie-calendar");
+  if (modal) modal.classList.remove("open");
+  calendarState.isOpen = false;
+}
+
+function renderCalorieCalendar() {
+  const container = document.getElementById("calendar-days-grid");
+  const monthYearLabel = document.getElementById("calendar-month-year-label");
+  const canvas = document.getElementById("calendar-month-canvas");
+  if (!container) return;
+
+  const year = calendarState.viewingYear;
+  const month = calendarState.viewingMonth;
+
+  if (monthYearLabel) {
+    monthYearLabel.textContent = `Tháng ${month + 1}, ${year}`;
+  }
+
+  container.innerHTML = "";
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const firstDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7; // Mon = 0, Sun = 6
+
+  const todayStr = getTodayDateString();
+  let deficitCount = 0;
+  let surplusCount = 0;
+  let totalNetOfDataDays = 0;
+  let dataDaysCount = 0;
+
+  currentMonthChartData = [];
+
+  // 1. Previous month trailing days
+  for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+    const prevDayNum = daysInPrevMonth - i;
+    const prevMonthIdx = month === 0 ? 11 : month - 1;
+    const prevYearNum = month === 0 ? year - 1 : year;
+    const dateStr = `${prevYearNum}-${String(prevMonthIdx + 1).padStart(2, "0")}-${String(prevDayNum).padStart(2, "0")}`;
+
+    const cell = document.createElement("div");
+    cell.className = "cal-day-cell other-month";
+    cell.innerHTML = `<span class="cal-day-num">${prevDayNum}</span>`;
+    cell.onclick = () => {
+      calendarState.viewingYear = prevYearNum;
+      calendarState.viewingMonth = prevMonthIdx;
+      state.selectedDate = dateStr;
+      closeCalorieCalendar();
+      renderHealthTracker();
+    };
+    container.appendChild(cell);
+  }
+
+  // 2. Current month active days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const stats = getDayCalorieStats(dateStr);
+    currentMonthChartData.push({ day: d, dateStr, ...stats });
+
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === state.selectedDate;
+
+    const cell = document.createElement("div");
+    let cellClass = "cal-day-cell";
+    if (isToday) cellClass += " is-today";
+    if (isSelected) cellClass += " is-selected";
+    cell.className = cellClass;
+
+    let badgeHtml = "";
+    if (stats.hasData) {
+      dataDaysCount++;
+      totalNetOfDataDays += stats.netBalance;
+
+      let badgeClass = "cal-badge";
+      let prefix = "";
+      if (stats.netBalance < -100) {
+        badgeClass += " deficit";
+        deficitCount++;
+        prefix = "";
+      } else if (stats.netBalance > 100) {
+        badgeClass += " surplus";
+        surplusCount++;
+        prefix = "+";
+      } else {
+        badgeClass += " balanced";
+        prefix = stats.netBalance > 0 ? "+" : "";
+      }
+
+      const sign = prefix + stats.netBalance.toLocaleString("vi-VN");
+      badgeHtml = `<span class="${badgeClass}">${sign}</span>`;
+      cell.setAttribute("title", `Ngày ${d}/${month + 1}/${year}\n• Calo nạp: ${stats.intake.toLocaleString("vi-VN")} kcal\n• Tiêu hao: ${stats.totalBurned.toLocaleString("vi-VN")} kcal\n• Hiệu số: ${sign} kcal`);
+    } else {
+      cell.setAttribute("title", `Ngày ${d}/${month + 1}/${year}\n(Chưa có nhật ký ăn uống/vận động)`);
+    }
+
+    cell.innerHTML = `
+      <span class="cal-day-num">${d}</span>
+      ${badgeHtml}
+    `;
+
+    cell.onclick = () => {
+      state.selectedDate = dateStr;
+      closeCalorieCalendar();
+      renderHealthTracker();
+    };
+
+    container.appendChild(cell);
+  }
+
+  // 3. Next month leading days to complete full weeks
+  const totalRendered = firstDayOfWeek + daysInMonth;
+  const remainingCells = (7 - (totalRendered % 7)) % 7;
+  for (let n = 1; n <= remainingCells; n++) {
+    const nextMonthIdx = month === 11 ? 0 : month + 1;
+    const nextYearNum = month === 11 ? year + 1 : year;
+    const dateStr = `${nextYearNum}-${String(nextMonthIdx + 1).padStart(2, "0")}-${String(n).padStart(2, "0")}`;
+
+    const cell = document.createElement("div");
+    cell.className = "cal-day-cell other-month";
+    cell.innerHTML = `<span class="cal-day-num">${n}</span>`;
+    cell.onclick = () => {
+      calendarState.viewingYear = nextYearNum;
+      calendarState.viewingMonth = nextMonthIdx;
+      state.selectedDate = dateStr;
+      closeCalorieCalendar();
+      renderHealthTracker();
+    };
+    container.appendChild(cell);
+  }
+
+  // Update summary chips
+  const elDeficit = document.getElementById("cal-summary-deficit-days");
+  if (elDeficit) elDeficit.textContent = `${deficitCount} ngày`;
+
+  const elSurplus = document.getElementById("cal-summary-surplus-days");
+  if (elSurplus) elSurplus.textContent = `${surplusCount} ngày`;
+
+  const elAvg = document.getElementById("cal-summary-avg-net");
+  if (elAvg) {
+    if (dataDaysCount > 0) {
+      const avg = Math.round(totalNetOfDataDays / dataDaysCount);
+      elAvg.textContent = (avg > 0 ? "+" : "") + avg.toLocaleString("vi-VN") + " kcal";
+    } else {
+      elAvg.textContent = "Chưa có dữ liệu";
+    }
+  }
+
+  const elCanvasSum = document.getElementById("calendar-canvas-summary");
+  if (elCanvasSum) {
+    elCanvasSum.textContent = `${dataDaysCount}/${daysInMonth} ngày có dữ liệu`;
+  }
+
+  // Render HTML5 Canvas
+  if (canvas) {
+    drawCalendarMonthCanvas(canvas, currentMonthChartData);
+  }
+}
+
+function drawCalendarMonthCanvas(canvas, data) {
+  if (!canvas || !data || data.length === 0) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const width = rect.width || 560;
+  const height = rect.height || 48;
+
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, width, height);
+
+  const baselineY = Math.round(height * 0.5);
+
+  // Draw dashed baseline (zero net balance)
+  ctx.strokeStyle = "rgba(148, 163, 184, 0.4)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(10, baselineY);
+  ctx.lineTo(width - 10, baselineY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Find max value to scale
+  let maxAbs = 600;
+  data.forEach(d => {
+    if (d.hasData && Math.abs(d.netBalance) > maxAbs) {
+      maxAbs = Math.abs(d.netBalance);
+    }
+  });
+
+  const availableHeight = (height * 0.5) - 5;
+  const stepX = (width - 24) / (data.length - 1 || 1);
+  const barWidth = Math.max(3, Math.min(10, stepX * 0.65));
+
+  data.forEach((d, idx) => {
+    const x = 12 + idx * stepX;
+    if (!d.hasData) {
+      ctx.fillStyle = "rgba(148, 163, 184, 0.25)";
+      ctx.beginPath();
+      ctx.arc(x, baselineY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    const ratio = Math.min(1, Math.abs(d.netBalance) / maxAbs);
+    const barH = Math.max(4, ratio * availableHeight);
+
+    if (d.netBalance < -100) {
+      // Deficit: green bar
+      ctx.fillStyle = "#10b981";
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x - barWidth / 2, baselineY, barWidth, barH, [0, 0, 2, 2]);
+      } else {
+        ctx.rect(x - barWidth / 2, baselineY, barWidth, barH);
+      }
+      ctx.fill();
+    } else if (d.netBalance > 100) {
+      // Surplus: red bar
+      ctx.fillStyle = "#ef4444";
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x - barWidth / 2, baselineY - barH, barWidth, barH, [2, 2, 0, 0]);
+      } else {
+        ctx.rect(x - barWidth / 2, baselineY - barH, barWidth, barH);
+      }
+      ctx.fill();
+    } else {
+      // Balanced: blue dot
+      ctx.fillStyle = "#3b82f6";
+      ctx.beginPath();
+      ctx.arc(x, baselineY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+// =============================================================================
 // 10. INITIALIZATION & EVENT LISTENERS
 // =============================================================================
 if (typeof document !== "undefined") { document.addEventListener("DOMContentLoaded", () => {
@@ -1679,6 +2014,76 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
       }
     });
   }
+
+  const btnOpenCal = document.getElementById("btn-open-calendar");
+  if (btnOpenCal) {
+    btnOpenCal.addEventListener("click", openCalorieCalendar);
+  }
+
+  const btnCloseCal = document.getElementById("btn-close-calendar-modal");
+  const btnCloseCal2 = document.getElementById("btn-close-calendar-modal-2");
+  if (btnCloseCal) btnCloseCal.addEventListener("click", closeCalorieCalendar);
+  if (btnCloseCal2) btnCloseCal2.addEventListener("click", closeCalorieCalendar);
+
+  const calModal = document.getElementById("modal-calorie-calendar");
+  if (calModal) {
+    calModal.addEventListener("click", e => {
+      if (e.target === calModal) closeCalorieCalendar();
+    });
+  }
+
+  const btnCalPrevMonth = document.getElementById("btn-cal-prev-month");
+  if (btnCalPrevMonth) {
+    btnCalPrevMonth.addEventListener("click", () => {
+      if (calendarState.viewingMonth === 0) {
+        calendarState.viewingMonth = 11;
+        calendarState.viewingYear--;
+      } else {
+        calendarState.viewingMonth--;
+      }
+      renderCalorieCalendar();
+    });
+  }
+
+  const btnCalNextMonth = document.getElementById("btn-cal-next-month");
+  if (btnCalNextMonth) {
+    btnCalNextMonth.addEventListener("click", () => {
+      if (calendarState.viewingMonth === 11) {
+        calendarState.viewingMonth = 0;
+        calendarState.viewingYear++;
+      } else {
+        calendarState.viewingMonth++;
+      }
+      renderCalorieCalendar();
+    });
+  }
+
+  const btnCalToday = document.getElementById("btn-cal-today");
+  if (btnCalToday) {
+    btnCalToday.addEventListener("click", () => {
+      const todayParts = getTodayDateString().split("-").map(Number);
+      calendarState.viewingYear = todayParts[0];
+      calendarState.viewingMonth = todayParts[1] - 1;
+      state.selectedDate = getTodayDateString();
+      renderCalorieCalendar();
+      renderHealthTracker();
+    });
+  }
+
+  window.addEventListener("resize", () => {
+    if (calendarState && calendarState.isOpen) {
+      const canvas = document.getElementById("calendar-month-canvas");
+      if (canvas && currentMonthChartData) {
+        drawCalendarMonthCanvas(canvas, currentMonthChartData);
+      }
+    }
+  });
+
+  window.addEventListener("keydown", e => {
+    if (e.key === "Escape" && calendarState && calendarState.isOpen) {
+      closeCalorieCalendar();
+    }
+  });
 
   const btnSaveProfile = document.getElementById("btn-save-profile");
   if (btnSaveProfile) {
