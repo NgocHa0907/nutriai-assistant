@@ -1,9 +1,10 @@
 {
-  "name": "ai-health-calorie-assistant",
+  "name": "nutriai-assistant",
   "version": "1.0.0",
-  "description": "AI Health and Calorie Tracker Assistant",
+  "description": "NutriAI - Smart Calorie & Health Assistant",
   "scripts": {
-    "start": "node server.js"
+    "start": "node local-server.js",
+    "build": "echo 'Static build ready'"
   },
   "keywords": [
     "ai",

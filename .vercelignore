@@ -1,3 +1,4 @@
+local-server.js
 server.js
 test*.js
 *.log

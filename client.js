@@ -1,3 +1,32 @@
+const safeStorage = {
+  getItem: (key) => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch (e) {}
+    return null;
+  },
+  setItem: (key, val) => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem(key, val);
+      }
+    } catch (e) {}
+  }
+};
+// Guard against server-side execution
+if (typeof window === "undefined") {
+  if (typeof module !== "undefined") {
+    module.exports = (req, res) => {
+      if (res) {
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "text/plain");
+        res.end("NutriAI Client Script");
+      }
+    };
+  }
+}
 /**
  * NutriAI - Trợ Lý Calo & Theo Dõi Sức Khỏe Thông Minh
  * Client Application Logic
@@ -115,7 +144,7 @@ function getTodayDateString() {
 }
 
 function loadApiConfig() {
-  const saved = localStorage.getItem(STORAGE_KEYS.API_CONFIG);
+  const saved = safeStorage.getItem(STORAGE_KEYS.API_CONFIG);
   if (saved) {
     try { return JSON.parse(saved); } catch (e) {}
   }
@@ -130,20 +159,20 @@ function loadApiConfig() {
 
 function saveApiConfig(config) {
   state.apiConfig = config;
-  localStorage.setItem(STORAGE_KEYS.API_CONFIG, JSON.stringify(config));
+  safeStorage.setItem(STORAGE_KEYS.API_CONFIG, JSON.stringify(config));
 }
 
 function loadSystemPrompt() {
-  return localStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT) || DEFAULT_SYSTEM_PROMPT;
+  return safeStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT) || DEFAULT_SYSTEM_PROMPT;
 }
 
 function saveSystemPrompt(promptText) {
   state.systemPrompt = promptText;
-  localStorage.setItem(STORAGE_KEYS.SYSTEM_PROMPT, promptText);
+  safeStorage.setItem(STORAGE_KEYS.SYSTEM_PROMPT, promptText);
 }
 
 function loadUserProfile() {
-  const saved = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+  const saved = safeStorage.getItem(STORAGE_KEYS.USER_PROFILE);
   if (saved) {
     try { return JSON.parse(saved); } catch (e) {}
   }
@@ -159,11 +188,11 @@ function loadUserProfile() {
 
 function saveUserProfile(profile) {
   state.profile = profile;
-  localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+  safeStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
 }
 
 function loadDailyLogs() {
-  const saved = localStorage.getItem(STORAGE_KEYS.DAILY_LOGS);
+  const saved = safeStorage.getItem(STORAGE_KEYS.DAILY_LOGS);
   if (saved) {
     try { return JSON.parse(saved); } catch (e) {}
   }
@@ -171,7 +200,7 @@ function loadDailyLogs() {
 }
 
 function saveDailyLogs() {
-  localStorage.setItem(STORAGE_KEYS.DAILY_LOGS, JSON.stringify(state.dailyLogs));
+  safeStorage.setItem(STORAGE_KEYS.DAILY_LOGS, JSON.stringify(state.dailyLogs));
 }
 
 function getDailyLog(dateStr) {
@@ -190,7 +219,7 @@ function getDailyLog(dateStr) {
 }
 
 function loadChatMessages() {
-  const saved = localStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES);
+  const saved = safeStorage.getItem(STORAGE_KEYS.CHAT_MESSAGES);
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -215,7 +244,7 @@ function loadChatMessages() {
 function saveChatMessages() {
   // Only save non-typing messages
   const toSave = state.chatMessages.filter(m => !m.isTyping && !String(m.content).includes("typing-indicator"));
-  localStorage.setItem(STORAGE_KEYS.CHAT_MESSAGES, JSON.stringify(toSave));
+  safeStorage.setItem(STORAGE_KEYS.CHAT_MESSAGES, JSON.stringify(toSave));
 }
 
 // =============================================================================
@@ -1522,8 +1551,8 @@ function closePromptViewModal() {
 // =============================================================================
 // 10. INITIALIZATION & EVENT LISTENERS
 // =============================================================================
-document.addEventListener("DOMContentLoaded", () => {
-  const savedTheme = localStorage.getItem(STORAGE_KEYS.APP_THEME) || "light";
+if (typeof document !== "undefined") { document.addEventListener("DOMContentLoaded", () => {
+  const savedTheme = safeStorage.getItem(STORAGE_KEYS.APP_THEME) || "light";
   document.documentElement.setAttribute("data-theme", savedTheme);
 
   const themeBtn = document.getElementById("theme-toggle");
@@ -1532,7 +1561,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const cur = document.documentElement.getAttribute("data-theme");
       const next = cur === "dark" ? "light" : "dark";
       document.documentElement.setAttribute("data-theme", next);
-      localStorage.setItem(STORAGE_KEYS.APP_THEME, next);
+      safeStorage.setItem(STORAGE_KEYS.APP_THEME, next);
     };
   }
 
@@ -1871,3 +1900,4 @@ document.addEventListener("DOMContentLoaded", () => {
   renderChatMessages();
   renderHealthTracker();
 });
+}

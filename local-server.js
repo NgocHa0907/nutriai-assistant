@@ -181,4 +181,6 @@ if (require.main === module) {
   startServer(PORT);
 }
 
-module.exports = server;
+module.exports = (req, res) => {
+  server.emit("request", req, res);
+};
