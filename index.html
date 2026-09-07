@@ -7,6 +7,10 @@
   <meta name="description" content="Trợ lý AI đếm calo thông minh, tính BMR, TDEE và theo dõi sức khỏe hàng ngày kết nối API Google Gemini và các LLM khác">
   <link rel="stylesheet" href="/styles.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥗</text></svg>">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -53,6 +57,7 @@
 
       <!-- Actions -->
       <div class="header-actions">
+                <div id="auth-area" class="auth-area"></div>
         <div id="header-api-badge" class="status-badge" title="Trạng thái cấu hình AI">
           <span class="status-dot active" id="api-status-dot"></span>
           <span id="api-status-text">Gemini: gemini-flash-latest</span>
@@ -743,6 +748,7 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Main JavaScript -->
+  <script src="firebase-config.js"></script>
   <script src="client.js"></script>
 </body>
 </html>

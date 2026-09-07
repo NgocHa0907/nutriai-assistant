@@ -160,6 +160,7 @@ function loadApiConfig() {
 function saveApiConfig(config) {
   state.apiConfig = config;
   safeStorage.setItem(STORAGE_KEYS.API_CONFIG, JSON.stringify(config));
+  if (typeof syncToCloudIfLoggedIn === 'function') syncToCloudIfLoggedIn();
 }
 
 function loadSystemPrompt() {
@@ -169,6 +170,7 @@ function loadSystemPrompt() {
 function saveSystemPrompt(promptText) {
   state.systemPrompt = promptText;
   safeStorage.setItem(STORAGE_KEYS.SYSTEM_PROMPT, promptText);
+  if (typeof syncToCloudIfLoggedIn === 'function') syncToCloudIfLoggedIn();
 }
 
 function loadUserProfile() {
@@ -189,6 +191,7 @@ function loadUserProfile() {
 function saveUserProfile(profile) {
   state.profile = profile;
   safeStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+  if (typeof syncToCloudIfLoggedIn === 'function') syncToCloudIfLoggedIn();
 }
 
 function loadDailyLogs() {
@@ -201,6 +204,7 @@ function loadDailyLogs() {
 
 function saveDailyLogs() {
   safeStorage.setItem(STORAGE_KEYS.DAILY_LOGS, JSON.stringify(state.dailyLogs));
+  if (typeof syncToCloudIfLoggedIn === 'function') syncToCloudIfLoggedIn();
 }
 
 function getDailyLog(dateStr) {
@@ -245,6 +249,7 @@ function saveChatMessages() {
   // Only save non-typing messages
   const toSave = state.chatMessages.filter(m => !m.isTyping && !String(m.content).includes("typing-indicator"));
   safeStorage.setItem(STORAGE_KEYS.CHAT_MESSAGES, JSON.stringify(toSave));
+  if (typeof syncToCloudIfLoggedIn === 'function') syncToCloudIfLoggedIn();
 }
 
 // =============================================================================
