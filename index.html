@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NutriAI - Trợ Lý Calo & Sức Khỏe Thông Minh (Gemini)</title>
+  <meta name="description" content="Trợ lý AI đếm calo thông minh, tính BMR, TDEE và theo dõi sức khỏe hàng ngày kết nối API Google Gemini và các LLM khác">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥗</text></svg>">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-area">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v8"></path>
+            <path d="m4.93 10.93 1.41 1.41"></path>
+            <path d="M2 18h2"></path>
+            <path d="M20 18h2"></path>
+            <path d="m19.07 10.93-1.41 1.41"></path>
+            <path d="M22 22H2"></path>
+            <path d="m16 6-4 4-4-4"></path>
+            <path d="M16 18a4 4 0 0 0-8 0"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            NutriAI
+            <span class="brand-tag">Gemini Flash AI</span>
+          </div>
+          <div class="brand-subtitle">Đếm Calo Tự Động & Theo Dõi Sức Khỏe</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button id="nav-chat" class="nav-tab-btn active" data-tab="tab-chat">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Trợ Lý Chat AI</span>
+        </button>
+        <button id="nav-health" class="nav-tab-btn" data-tab="tab-health">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Theo Dõi Sức Khỏe</span>
+        </button>
+        <button id="nav-api" class="nav-tab-btn" data-tab="tab-api">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Thêm & Cài Đặt API</span>
+        </button>
+      </nav>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <div id="header-api-badge" class="status-badge" title="Trạng thái cấu hình AI">
+          <span class="status-dot active" id="api-status-dot"></span>
+          <span id="api-status-text">Gemini: gemini-flash-latest</span>
+        </div>
+        <button id="theme-toggle" class="theme-toggle-btn" title="Chuyển đổi Sáng/Tối">
+          <svg id="theme-icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Tabs -->
+    <main class="main-content">
+
+      <!-- ================= TAB 1: CHAT AI ================= -->
+      <section id="tab-chat" class="tab-pane active">
+        <div class="chat-container">
+          <!-- Chat Sub-header -->
+          <div class="chat-header-bar">
+            <div class="chat-assistant-info">
+              <div class="chat-avatar">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 8V4H8"></path>
+                  <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+                  <path d="M2 14h2"></path>
+                  <path d="M20 14h2"></path>
+                  <path d="M15 13v2"></path>
+                  <path d="M9 13v2"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="chat-title-text" id="chat-model-name">NutriAI Assistant (gemini-flash-latest)</div>
+                <div class="chat-subtitle-text">Google Generative Language API • Tự động ghi vào Theo dõi sức khỏe</div>
+              </div>
+            </div>
+
+            <div class="chat-actions">
+              <button id="btn-view-prompt" class="btn-subtle" title="Xem prompt đang dùng">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>Xem Prompt</span>
+              </button>
+              <button id="btn-clear-chat" class="btn-subtle" title="Xóa lịch sử chat">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Xóa Chat</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Chat Messages Area -->
+          <div id="chat-messages" class="chat-messages">
+            <!-- Messages inserted dynamically by app.js -->
+          </div>
+
+          <!-- Prompt Suggestions / Quick Chips -->
+          <div class="chat-suggestions">
+            <button class="suggestion-chip" data-prompt="Bữa sáng tôi ăn 2 quả trứng 1 cái ngô">
+              <span>🌽🍳 Bữa sáng: 2 trứng + 1 ngô</span>
+            </button>
+            <button class="suggestion-chip" data-prompt="Trưa nay tôi ăn 1 tô phở bò tái và uống 1 ly trà đá">
+              <span>🍜🥩 Trưa: 1 tô phở bò tái + trà đá</span>
+            </button>
+            <button class="suggestion-chip" data-prompt="Chiều tôi uống 1 ly trà sữa trân châu 50% đường">
+              <span>🧋 Bữa phụ: 1 ly trà sữa trân châu</span>
+            </button>
+            <button class="suggestion-chip" data-prompt="Tối tôi ăn 1 chén cơm trắng, 150g ức gà áp chảo và 1 đĩa súp lơ luộc">
+              <span>🥦🍗 Tối: Cơm + 150g ức gà + súp lơ</span>
+            </button>
+          </div>
+
+          <!-- Chat Input Area -->
+          <div class="chat-input-area">
+            <form id="chat-form" class="chat-input-wrapper">
+              <textarea
+                id="chat-input"
+                class="chat-textarea"
+                rows="1"
+                placeholder="Nhập bữa ăn của bạn (ví dụ: 'bữa sáng tôi ăn 2 quả trứng 1 cái ngô')..."></textarea>
+              <button type="submit" id="btn-send-message" class="btn-send-message" title="Gửi tin nhắn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+            </form>
+            <div class="chat-footer-note">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              <span>AI sẽ tự động phân tích calo và cập nhật trực tiếp vào trang Theo dõi sức khỏe.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- ================= TAB 2: THEO DÕI SỨC KHỎE ================= -->
+      <section id="tab-health" class="tab-pane">
+        <div class="health-container">
+
+          <!-- Date Navigation Bar -->
+          <div class="date-nav-bar">
+            <div class="date-controls">
+              <button id="btn-date-prev" class="btn-subtle" title="Ngày hôm trước">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>Hôm trước</span>
+              </button>
+              <button id="btn-date-today" class="btn-subtle active" title="Hôm nay">Hôm nay</button>
+              <button id="btn-date-next" class="btn-subtle" title="Ngày hôm sau">
+                <span>Hôm sau</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+
+            <div class="current-date-title" id="display-date-title">Hôm nay</div>
+
+            <div>
+              <input type="date" id="health-date-picker" class="date-input-control">
+            </div>
+          </div>
+
+          <!-- Top Grid: Hồ sơ thể chất & Tính BMR/TDEE + Cân Bằng Năng Lượng -->
+          <div class="health-grid-top">
+
+            <!-- Card 1: Hồ sơ thể chất & Tính BMR / TDEE -->
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <div class="card-icon green">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                  </div>
+                  <div>
+                    <h3 class="card-title">Chỉ Số Thể Chất & BMR</h3>
+                    <p class="card-subtitle">Công thức Mifflin-St Jeor chuẩn y khoa</p>
+                  </div>
+                </div>
+                <button id="btn-save-profile" class="btn-subtle" title="Lưu thông tin hồ sơ">Lưu Hồ Sơ</button>
+              </div>
+
+              <!-- Profile Inputs -->
+              <div class="profile-form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="user-gender">Giới tính</label>
+                  <select id="user-gender" class="form-select">
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="user-age">Tuổi</label>
+                  <input type="number" id="user-age" class="form-input" min="10" max="120" value="25">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="user-height">Chiều cao (cm)</label>
+                  <input type="number" id="user-height" class="form-input" min="80" max="250" value="170">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="user-weight">Cân nặng (kg)</label>
+                  <input type="number" id="user-weight" class="form-input" min="30" max="300" step="0.5" value="65">
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                  <label class="form-label" for="user-activity-level">Mức độ hoạt động cơ sở</label>
+                  <select id="user-activity-level" class="form-select">
+                    <option value="1.2">Ít vận động (làm việc văn phòng, ít đi lại)</option>
+                    <option value="1.375" selected>Vận động nhẹ (tập thể dục 1-3 ngày/tuần)</option>
+                    <option value="1.55">Vận động vừa (tập thể dục 3-5 ngày/tuần)</option>
+                    <option value="1.725">Năng động (vận động 6-7 ngày/tuần)</option>
+                    <option value="1.9">Rất năng động (lao động nặng / VĐV)</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                  <label class="form-label" for="user-goal">Mục tiêu cân nặng</label>
+                  <select id="user-goal" class="form-select">
+                    <option value="maintain">Duy trì cân nặng hiện tại</option>
+                    <option value="mild_loss" selected>Giảm cân nhẹ (-300 kcal/ngày)</option>
+                    <option value="standard_loss">Giảm cân chuẩn (-500 kcal/ngày)</option>
+                    <option value="gain">Tăng cân / Tăng cơ (+400 kcal/ngày)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Calculated Results Pill Row -->
+              <div class="bmr-metrics-row">
+                <div class="metric-pill">
+                  <div class="metric-pill-label">BMR Cơ Bản</div>
+                  <div class="metric-pill-val" id="val-bmr">1,593</div>
+                  <div class="metric-pill-desc">kcal/ngày (nghỉ ngơi)</div>
+                </div>
+                <div class="metric-pill">
+                  <div class="metric-pill-label">TDEE Cơ Sở</div>
+                  <div class="metric-pill-val" id="val-tdee" style="color:#0ea5e9;">2,190</div>
+                  <div class="metric-pill-desc">kcal/ngày duy trì</div>
+                </div>
+                <div class="metric-pill">
+                  <div class="metric-pill-label">Mục Tiêu Nạp</div>
+                  <div class="metric-pill-val" id="val-target-calories" style="color:#f59e0b;">1,890</div>
+                  <div class="metric-pill-desc">kcal/ngày khuyến nghị</div>
+                </div>
+              </div>
+
+              <!-- BMI Visual Indicator -->
+              <div class="bmi-indicator-bar">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                  <span>Chỉ số BMI: <strong id="val-bmi" style="color: #10b981;">22.5</strong></span>
+                  <span id="val-bmi-category" style="font-weight: 600; color: #10b981;">Bình thường (Chuẩn)</span>
+                </div>
+                <div class="bmi-bar-track">
+                  <div class="bmi-bar-pointer" id="bmi-pointer" style="left: 42%;"></div>
+                </div>
+                <div class="bmi-legend">
+                  <span>Gầy &lt;18.5</span>
+                  <span>Chuẩn 18.5-24.9</span>
+                  <span>Thừa cân 25-29.9</span>
+                  <span>Béo phì &ge;30</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Cân Bằng Năng Lượng Hôm Nay -->
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <div class="card-icon blue">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                  </div>
+                  <div>
+                    <h3 class="card-title">Cân Bằng Năng Lượng Hôm Nay</h3>
+                    <p class="card-subtitle">So sánh Calo nạp vào vs Calo tiêu hao</p>
+                  </div>
+                </div>
+                <span class="status-badge" id="badge-energy-date">Hôm nay</span>
+              </div>
+
+              <!-- Hero 3 Stat Numbers -->
+              <div class="energy-summary-hero">
+                <div class="hero-stat-box">
+                  <div class="hero-stat-label">Calo Nạp Vào</div>
+                  <div class="hero-stat-value intake" id="stat-intake-total">0</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted);">từ thức ăn</div>
+                </div>
+
+                <div class="hero-divider">-</div>
+
+                <div class="hero-stat-box">
+                  <div class="hero-stat-label">Tổng Tiêu Hao</div>
+                  <div class="hero-stat-value burned" id="stat-burn-total">1,593</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted);">BMR + Vận động</div>
+                </div>
+
+                <div class="hero-divider">=</div>
+
+                <div class="hero-stat-box">
+                  <div class="hero-stat-label">Cân Bằng Ròng</div>
+                  <div class="hero-stat-value net deficit" id="stat-net-total">-1,593</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted);" id="stat-net-desc">Thâm hụt</div>
+                </div>
+              </div>
+
+              <!-- Progress Bar: Intake vs Target -->
+              <div class="balance-progress-box">
+                <div class="progress-header">
+                  <span>Tiến độ nạp Calo hôm nay:</span>
+                  <span><strong id="progress-text-val">0</strong> / <span id="progress-text-target">1,890</span> kcal</span>
+                </div>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" id="intake-progress-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Calorie Deficit / Surplus Status Alert -->
+              <div id="balance-alert-banner" class="balance-status-alert deficit">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span id="balance-alert-text">Đang trong trạng thái thâm hụt calo, hỗ trợ quá trình giảm mỡ.</span>
+              </div>
+
+              <!-- Breakdown of Burned calories -->
+              <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-secondary); background:var(--bg-tertiary); padding:8px 12px; border-radius:var(--radius-md);">
+                <span>🔥 Calo BMR cơ bản: <strong id="val-burn-bmr">1,593</strong> kcal</span>
+                <span>🏃‍♂️ Calo vận động thêm: <strong id="val-burn-exercise">0</strong> kcal</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Grid: Calo Tiêu Hao Vận Động + Calo Nạp Vào Bữa Ăn -->
+          <div class="health-grid-bottom">
+
+            <!-- Card 3: Calo Tiêu Hao do Hoạt Động Hàng Ngày -->
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <div class="card-icon orange">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                  </div>
+                  <div>
+                    <h3 class="card-title">Calo Tiêu Hao Hoạt Động</h3>
+                    <p class="card-subtitle">Ghi nhận bài tập và vận động hàng ngày</p>
+                  </div>
+                </div>
+                <span class="status-badge" style="color: #0ea5e9; font-weight: 700;">
+                  Tổng: <span id="badge-total-activity-burn" style="margin-left:4px;">0</span>&nbsp;kcal
+                </span>
+              </div>
+
+              <!-- Quick Presets -->
+              <div>
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-muted); margin-bottom:0.4rem;">GỢI Ý THÊM NHANH:</div>
+                <div class="activity-quick-chips">
+                  <button class="quick-chip-btn" data-act-name="Đi bộ" data-act-time="30" data-act-cal="120">🚶‍♂️ Đi bộ 30p (120 kcal)</button>
+                  <button class="quick-chip-btn" data-act-name="Chạy bộ vừa" data-act-time="30" data-act-cal="300">🏃‍♂️ Chạy bộ 30p (300 kcal)</button>
+                  <button class="quick-chip-btn" data-act-name="Tập Gym / Kháng lực" data-act-time="45" data-act-cal="250">🏋️‍♂️ Tập Gym 45p (250 kcal)</button>
+                  <button class="quick-chip-btn" data-act-name="Đạp xe ngoài trời" data-act-time="30" data-act-cal="200">🚴‍♂️ Đạp xe 30p (200 kcal)</button>
+                  <button class="quick-chip-btn" data-act-name="Bơi lội" data-act-time="30" data-act-cal="280">🏊‍♂️ Bơi lội 30p (280 kcal)</button>
+                  <button class="quick-chip-btn" data-act-name="Dọn dẹp nhà cửa" data-act-time="60" data-act-cal="160">🧹 Dọn nhà 60p (160 kcal)</button>
+                </div>
+              </div>
+
+              <!-- Add custom activity row -->
+              <form id="form-add-activity" class="activity-add-row">
+                <div class="form-group">
+                  <label class="form-label">Tên hoạt động</label>
+                  <input type="text" id="act-input-name" class="form-input" placeholder="Ví dụ: Chạy bộ, Nhảy dây..." required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phút</label>
+                  <input type="number" id="act-input-time" class="form-input" placeholder="30" min="1" value="30">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Kcal tiêu hao</label>
+                  <input type="number" id="act-input-cal" class="form-input" placeholder="200" min="1" required>
+                </div>
+                <button type="submit" class="btn-add-item" title="Thêm vào danh sách">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <span>Thêm</span>
+                </button>
+              </form>
+
+              <!-- Activity List for Current Date -->
+              <div class="activity-list" id="activity-items-list">
+                <!-- Injected by app.js -->
+              </div>
+            </div>
+
+            <!-- Card 4: Calo Nạp Vào Từ Các Bữa Ăn (Đồng bộ từ AI Chat) -->
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <div class="card-icon purple">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                  </div>
+                  <div>
+                    <h3 class="card-title">Calo Nạp Vào (Bữa Ăn)</h3>
+                    <p class="card-subtitle">Tự động đồng bộ từ Trợ lý Chat AI</p>
+                  </div>
+                </div>
+                <button id="btn-open-add-food-modal" class="btn-subtle" title="Thêm món ăn thủ công">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <span>+ Thêm món</span>
+                </button>
+              </div>
+
+              <!-- Meals Container: Sáng, Trưa, Tối, Phụ -->
+              <div class="meals-container" id="meals-blocks-container">
+                <!-- Dynamically rendered by app.js -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 7-Day History Chart -->
+          <div class="dash-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon green">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+                </div>
+                <div>
+                  <h3 class="card-title">Thống Kê 7 Ngày Gần Nhất</h3>
+                  <p class="card-subtitle">So sánh lượng Calo nạp vào và Calo tiêu hao qua từng ngày</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="history-bars-wrapper" id="history-chart-bars">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+
+            <div class="chart-legend">
+              <div class="legend-item">
+                <div class="legend-color" style="background:#f59e0b;"></div>
+                <span>Calo Nạp Vào (Thức ăn)</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background:#0ea5e9;"></div>
+                <span>Tổng Tiêu Hao (BMR + Vận động)</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+      <!-- ================= TAB 3: THÊM & CÀI ĐẶT API ================= -->
+      <section id="tab-api" class="tab-pane">
+        <div class="api-settings-container">
+
+          <!-- Provider Selector Grid -->
+          <div class="dash-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon green">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                </div>
+                <div>
+                  <h3 class="card-title">Chọn Nhà Cung Cấp AI</h3>
+                  <p class="card-subtitle">Kết nối trực tiếp qua Google Gemini API hoặc các mô hình OpenAI, Groq, OpenRouter</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="provider-cards-grid">
+              <!-- Google Gemini (Default) -->
+              <div class="provider-card active" data-provider="gemini">
+                <div class="provider-icon" style="background:#4285f420; color:#4285f4;">✨</div>
+                <div class="provider-name">Google Gemini</div>
+                <div class="provider-sub">gemini-flash-latest</div>
+              </div>
+
+              <!-- OpenAI -->
+              <div class="provider-card" data-provider="openai">
+                <div class="provider-icon" style="background:#10a37f20; color:#10a37f;">⚡</div>
+                <div class="provider-name">OpenAI</div>
+                <div class="provider-sub">GPT-4o mini, GPT-4o</div>
+              </div>
+
+              <!-- OpenRouter -->
+              <div class="provider-card" data-provider="openrouter">
+                <div class="provider-icon" style="background:#6366f120; color:#6366f1;">🌐</div>
+                <div class="provider-name">OpenRouter</div>
+                <div class="provider-sub">Hàng trăm model đa dạng</div>
+              </div>
+
+              <!-- Groq -->
+              <div class="provider-card" data-provider="groq">
+                <div class="provider-icon" style="background:#f9731620; color:#f97316;">⚡</div>
+                <div class="provider-name">Groq</div>
+                <div class="provider-sub">Llama 3.3 siêu nhanh</div>
+              </div>
+
+              <!-- Custom OpenAI compatible -->
+              <div class="provider-card" data-provider="custom">
+                <div class="provider-icon" style="background:#8b5cf620; color:#8b5cf6;">🛠️</div>
+                <div class="provider-name">Tùy Chỉnh</div>
+                <div class="provider-sub">Ollama, LM Studio...</div>
+              </div>
+
+              <!-- Demo / Fallback Mode -->
+              <div class="provider-card" data-provider="demo">
+                <div class="provider-icon" style="background:#f59e0b20; color:#f59e0b;">🧪</div>
+                <div class="provider-name">Chế Độ Demo</div>
+                <div class="provider-sub">Không cần API Key</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- API Configuration Form -->
+          <div class="dash-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon blue">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                </div>
+                <div>
+                  <h3 class="card-title">Cấu Hình Kết Nối API</h3>
+                  <p class="card-subtitle">Hỗ trợ kết nối chuẩn Google Generative Language API với header <code>X-goog-api-key</code></p>
+                </div>
+              </div>
+            </div>
+
+            <form id="form-api-settings" class="api-form-box">
+              <!-- API Key field -->
+              <div class="form-group" id="group-api-key">
+                <label class="form-label" for="input-api-key">
+                  <span>API Key (Google Gemini / OpenAI)</span>
+                  <span style="color:var(--color-danger)">*</span>
+                </label>
+                <div class="password-input-group">
+                  <input
+                    type="password"
+                    id="input-api-key"
+                    class="form-input"
+                    placeholder="AIzaSy... hoặc sk-..."
+                    autocomplete="off">
+                  <button type="button" id="btn-toggle-key-vis" class="password-toggle-btn" title="Hiện/Ẩn Key">
+                    <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  </button>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top: 3px;">
+                  Gửi trực tiếp trong header <code>X-goog-api-key</code> tới máy chủ Google AI. Key được lưu an toàn trong trình duyệt (localStorage).
+                </div>
+              </div>
+
+              <!-- Base URL -->
+              <div class="form-group">
+                <label class="form-label" for="input-api-url">Endpoint Base URL</label>
+                <input
+                  type="text"
+                  id="input-api-url"
+                  class="form-input"
+                  value="https://generativelanguage.googleapis.com/v1beta/models">
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top: 3px;">
+                  Định dạng: <code>https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent</code>
+                </div>
+              </div>
+
+              <!-- Model Selector -->
+              <div class="form-group">
+                <label class="form-label" for="select-model-preset">Mô hình AI (Model)</label>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                  <select id="select-model-preset" class="form-select" style="min-width: 240px;">
+                    <option value="gemini-flash-latest" selected>gemini-flash-latest (Khuyên dùng)</option>
+                    <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                    <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                    <option value="gpt-4o-mini">gpt-4o-mini</option>
+                    <option value="gpt-4o">gpt-4o</option>
+                    <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Groq)</option>
+                    <option value="custom">-- Nhập tên model khác --</option>
+                  </select>
+                  <input
+                    type="text"
+                    id="input-model-custom"
+                    class="form-input"
+                    placeholder="Tên model (vd: gemini-flash-latest)"
+                    value="gemini-flash-latest"
+                    style="flex:1; min-width: 180px;">
+                </div>
+              </div>
+
+              <!-- Temperature Slider -->
+              <div class="form-group">
+                <div style="display:flex; justify-content:space-between;">
+                  <label class="form-label" for="input-temperature">Độ sáng tạo (Temperature)</label>
+                  <span id="label-temp-val" style="font-size:0.8rem; font-weight:700; color:var(--accent-primary);">0.5</span>
+                </div>
+                <input type="range" id="input-temperature" min="0" max="1" step="0.1" value="0.5">
+              </div>
+
+              <!-- Test Connection Result Banner -->
+              <div id="test-conn-result" class="conn-test-result">
+                <!-- Injected by app.js -->
+              </div>
+
+              <!-- Action buttons -->
+              <div class="api-actions-row">
+                <div style="display:flex; gap:0.6rem;">
+                  <button type="button" id="btn-test-connection" class="btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                    <span>Kiểm tra kết nối</span>
+                  </button>
+                  <button type="button" id="btn-clear-api-key" class="btn-subtle" style="color:var(--color-danger);">
+                    <span>Xóa Key</span>
+                  </button>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                  <span>Lưu Cấu Hình API</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Prompt Customization Section -->
+          <div class="dash-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon orange">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                </div>
+                <div>
+                  <h3 class="card-title">Prompt Hệ Thống (System Prompt)</h3>
+                  <p class="card-subtitle">Chỉ dẫn Gemini phân tích calo chuẩn và trả về khối JSON tự động cập nhật nhật ký sức khỏe</p>
+                </div>
+              </div>
+              <button id="btn-reset-prompt" class="btn-subtle" title="Khôi phục Prompt mặc định chuẩn">Khôi Phục Mặc Định</button>
+            </div>
+
+            <div class="form-group">
+              <textarea id="input-system-prompt" class="form-input prompt-textarea" spellcheck="false"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end;">
+              <button id="btn-save-prompt" class="btn-primary" style="padding:0.5rem 1rem; font-size:0.82rem;">Lưu Prompt Mới</button>
+            </div>
+          </div>
+
+          <!-- API Guide Box with Curl Example -->
+          <div class="api-guide-box">
+            <h4>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              Cấu Trúc Gọi API Google Gemini Đang Dùng
+            </h4>
+            <p style="margin-bottom:0.5rem;">Hệ thống kết nối trực tiếp theo định dạng chuẩn của Google:</p>
+            <pre style="background:var(--bg-secondary); padding:0.75rem; border-radius:var(--radius-sm); font-size:0.78rem; overflow-x:auto; border:1px solid var(--border-color); margin-bottom:0.75rem;">curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" \
+  -H 'Content-Type: application/json' \
+  -H 'X-goog-api-key: YOUR_API_KEY' \
+  -X POST \
+  -d '{
+    "contents": [
+      {
+        "role": "user",
+        "parts": [{ "text": "Explain how AI works in a few words" }]
+      }
+    ]
+  }'</pre>
+            <ul>
+              <li><strong>Lấy Key miễn phí:</strong> Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio (aistudio.google.com)</a> để tạo Gemini API Key.</li>
+              <li><strong>Mô hình:</strong> <code>gemini-flash-latest</code>, <code>gemini-1.5-flash</code> hoặc <code>gemini-2.0-flash</code> (tốc độ nhanh và độ chính xác phân tích calo rất cao).</li>
+              <li><strong>Chế độ Demo:</strong> Nếu chưa có key ngay, chỉ cần chọn "Chế Độ Demo" để thử nghiệm đầy đủ mọi tính năng.</li>
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Modal 1: Thêm Món Ăn Thủ Công -->
+  <div id="modal-add-food" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Thêm Món Ăn Thủ Công</h3>
+        <button id="btn-close-food-modal" class="modal-close-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <form id="form-manual-food">
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label class="form-label" for="manual-food-meal">Bữa ăn</label>
+          <select id="manual-food-meal" class="form-select">
+            <option value="breakfast">Bữa sáng</option>
+            <option value="lunch">Bữa trưa</option>
+            <option value="dinner">Bữa tối</option>
+            <option value="snack">Bữa phụ / Ăn vặt</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label class="form-label" for="manual-food-name">Tên món ăn hoặc thức uống</label>
+          <input type="text" id="manual-food-name" class="form-input" placeholder="Ví dụ: 1 bát phở bò, 2 quả trứng..." required>
+        </div>
+
+        <div class="form-group" style="margin-bottom:1.25rem;">
+          <label class="form-label" for="manual-food-cal">Lượng Calo (kcal)</label>
+          <input type="number" id="manual-food-cal" class="form-input" placeholder="Ví dụ: 260" min="1" required>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+          <button type="button" id="btn-cancel-food-modal" class="btn-secondary">Hủy</button>
+          <button type="submit" class="btn-primary">Thêm Vào Nhật Ký</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Xem Prompt Chi Tiết Từ Chat -->
+  <div id="modal-view-prompt" class="modal-overlay">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Prompt Trợ Lý Dinh Dưỡng Đang Dùng</h3>
+        <button id="btn-close-prompt-modal" class="modal-close-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div style="font-size:0.85rem; color:var(--text-secondary); line-height:1.6;">
+        <p style="margin-bottom:0.75rem;">Dưới đây là System Prompt được cài sẵn cho AI để nhận diện món ăn người dùng chia sẻ, tính toán tổng calo và định dạng JSON để phần mềm tự động ghi vào trang Theo dõi sức khỏe:</p>
+        <pre id="prompt-preview-code" style="background:var(--bg-tertiary); padding:1rem; border-radius:var(--radius-md); font-size:0.78rem; max-height:280px; overflow-y:auto; border:1px solid var(--border-color); white-space:pre-wrap;"></pre>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button id="btn-goto-api-tab" class="btn-subtle">Đi tới trang Cài Đặt API để sửa</button>
+        <button id="btn-close-prompt-modal-2" class="btn-primary">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Main JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>
