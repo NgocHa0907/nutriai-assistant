@@ -1,28 +1,28 @@
 const https = require("https");
 const http = require("http");
 
-/**
- * Parse request body.
- * Vercel có thể đã parse req.body sẵn,
- * nhưng khi chạy local hoặc trong một số trường hợp
- * body vẫn cần đọc thủ công.
- */
-function parseBody(req) {
-  return new Promise((resolve, reject) => {
-    // Vercel đã parse body
-    if (req.body !== undefined && req.body !== null) {
-      if (typeof req.body === "string") {
-        try {
-          return resolve(JSON.parse(req.body));
-        } catch (error) {
-          return reject(new Error("Request body không phải JSON hợp lệ"));
-        }
-      }
+function sendJson(res, statusCode, data) {
+  res.statusCode = statusCode;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.end(JSON.stringify(data));
+}
 
-      return resolve(req.body);
+async function parseBody(req) {
+  // Vercel có thể parse body sẵn
+  if (req.body !== undefined && req.body !== null) {
+    if (typeof req.body === "string") {
+      try {
+        return JSON.parse(req.body);
+      } catch {
+        return {};
+      }
     }
 
-    // Đọc body thủ công
+    return req.body;
+  }
+
+  // Fallback đọc raw body
+  return new Promise((resolve, reject) => {
     let data = "";
 
     req.on("data", chunk => {
@@ -30,42 +30,42 @@ function parseBody(req) {
     });
 
     req.on("end", () => {
+      if (!data) {
+        return resolve({});
+      }
+
       try {
-        resolve(JSON.parse(data || "{}"));
-      } catch (error) {
-        reject(new Error("Request body không phải JSON hợp lệ"));
+        resolve(JSON.parse(data));
+      } catch {
+        resolve({});
       }
     });
 
-    req.on("error", error => {
-      reject(error);
-    });
+    req.on("error", reject);
   });
 }
 
-/**
- * Vercel Serverless Function
- */
-module.exports = async (req, res) => {
+module.exports = async function handler(req, res) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET, POST, OPTIONS"
+    "POST, OPTIONS"
   );
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization, X-goog-api-key"
   );
 
-  // Preflight
+  // OPTIONS
   if (req.method === "OPTIONS") {
-    return res.status(204).end();
+    res.statusCode = 204;
+    return res.end();
   }
 
-  // Chỉ cho phép POST
+  // Chỉ POST
   if (req.method !== "POST") {
-    return res.status(405).json({
+    return sendJson(res, 405, {
       error: "Chỉ hỗ trợ phương thức POST"
     });
   }
@@ -77,31 +77,29 @@ module.exports = async (req, res) => {
     const customHeaders = payload.headers || {};
     const requestData = JSON.stringify(payload.data || {});
 
-    // Kiểm tra targetUrl
     if (!targetUrl) {
-      return res.status(400).json({
+      return sendJson(res, 400, {
         error: "Thiếu tham số targetUrl"
       });
     }
 
-    // Parse URL
     let parsedUrl;
 
     try {
       parsedUrl = new URL(targetUrl);
-    } catch (error) {
-      return res.status(400).json({
+    } catch {
+      return sendJson(res, 400, {
         error: "targetUrl không hợp lệ"
       });
     }
 
-    // Chỉ cho phép HTTP/HTTPS
+    // Chỉ cho phép HTTP / HTTPS
     if (
       parsedUrl.protocol !== "https:" &&
       parsedUrl.protocol !== "http:"
     ) {
-      return res.status(400).json({
-        error: "targetUrl chỉ hỗ trợ HTTP hoặc HTTPS"
+      return sendJson(res, 400, {
+        error: "Chỉ hỗ trợ HTTP và HTTPS"
       });
     }
 
@@ -121,17 +119,14 @@ module.exports = async (req, res) => {
     delete forwardedHeaders["Content-Length"];
 
     // Đảm bảo Content-Type
-    if (!forwardedHeaders["Content-Type"] &&
-        !forwardedHeaders["content-type"]) {
+    if (!forwardedHeaders["Content-Type"]) {
       forwardedHeaders["Content-Type"] = "application/json";
     }
 
-    // Tính Content-Length mới
     forwardedHeaders["Content-Length"] =
       Buffer.byteLength(requestData);
 
-    // Request options
-    const proxyReqOptions = {
+    const options = {
       hostname: parsedUrl.hostname,
       port:
         parsedUrl.port ||
@@ -148,9 +143,8 @@ module.exports = async (req, res) => {
       timeout: 25000
     };
 
-    // Gửi request tới AI API
     const proxyReq = transport.request(
-      proxyReqOptions,
+      options,
       proxyRes => {
         let responseBody = "";
 
@@ -168,20 +162,19 @@ module.exports = async (req, res) => {
               "application/json; charset=utf-8"
           );
 
-          return res.end(responseBody);
+          res.end(responseBody);
         });
       }
     );
 
-    // Lỗi kết nối
     proxyReq.on("error", error => {
       console.error(
-        "AI Proxy error:",
-        error.message
+        "AI proxy error:",
+        error
       );
 
       if (!res.headersSent) {
-        return res.status(502).json({
+        sendJson(res, 502, {
           error:
             "Lỗi kết nối tới AI API: " +
             error.message
@@ -189,34 +182,30 @@ module.exports = async (req, res) => {
       }
     });
 
-    // Timeout
     proxyReq.on("timeout", () => {
-      console.error("AI Proxy timeout");
-
       proxyReq.destroy();
 
       if (!res.headersSent) {
-        return res.status(504).json({
+        sendJson(res, 504, {
           error:
-            "Hết thời gian chờ phản hồi từ AI API (Timeout)"
+            "Hết thời gian chờ phản hồi từ AI API"
         });
       }
     });
 
-    // Gửi body
     proxyReq.write(requestData);
     proxyReq.end();
 
   } catch (error) {
     console.error(
-      "AI Proxy request error:",
-      error.message
+      "AI proxy exception:",
+      error
     );
 
     if (!res.headersSent) {
-      return res.status(400).json({
+      sendJson(res, 500, {
         error:
-          "Dữ liệu yêu cầu không hợp lệ: " +
+          "Lỗi server: " +
           error.message
       });
     }
