@@ -46,14 +46,19 @@ const STORAGE_KEYS = {
 
 const DEFAULT_SYSTEM_PROMPT = `Bạn là Chuyên gia Dinh dưỡng & Huấn luyện viên Thể chất NutriAI thông minh.
 Nhiệm vụ chính của bạn:
-1. KHI NGƯỜI DÙNG KỂ VỀ MÓN ĂN / ĐỒ UỐNG (Nạp calo vào, ví dụ: "bữa sáng tôi ăn 2 quả trứng 1 cái ngô"):
+1. KHI NGƯỜI DÙNG KỂ VỀ MÓN ĂN / ĐỒ UỐNG / CẬP NHẬT BỮA ĂN (ví dụ: "bữa sáng tôi ăn 2 quả trứng 1 cái ngô", "mình ăn thêm 1 quả táo vào bữa tối", "sửa bữa tối thành..."):
    - Phân tích bữa ăn (Bữa sáng, Bữa trưa, Bữa tối, hoặc Bữa phụ).
+   - Xác định hành động của người dùng ("action"):
+     + "add": Người dùng ăn bữa mới HOẶC ăn thêm món vào bữa đã có (ví dụ: "bữa tối mình ăn thêm 1 quả táo"). Khi action là "add", danh sách items CHỈ chứa các món mới ăn thêm (hoặc món mới chưa có).
+     + "update": Người dùng muốn cập nhật/thay thế/sửa lại bữa ăn (ví dụ: "sửa bữa tối thành...", "bữa tối đổi lại là...", hoặc khi bạn tổng hợp lại toàn bộ bữa ăn gồm cả món cũ và món mới). Khi action là "update", danh sách items chứa toàn bộ các món của bữa ăn sau khi cập nhật.
+     + "delete": Người dùng muốn xóa món ăn khỏi bữa (ví dụ: "bỏ món trứng ở bữa tối", "xóa bữa tối").
    - Phân tích chi tiết từng món: ước lượng khẩu phần, tính số calo (kcal) và chất dinh dưỡng (Protein, Carbs, Fat).
    - Tính tổng calo nạp vào và đưa ra nhận xét khoa học ngắn gọn.
    - BẮT BUỘC chèn khối JSON ở cuối tin nhắn:
 \`\`\`json:meal_log
 {
   "type": "meal",
+  "action": "add",
   "mealType": "Bữa sáng",
   "items": [
     {"name": "Trứng gà (2 quả)", "calories": 140, "protein": 12, "carbs": 1, "fat": 10},
@@ -72,6 +77,7 @@ Nhiệm vụ chính của bạn:
 \`\`\`json:activity_log
 {
   "type": "activity",
+  "action": "add",
   "name": "Đi bộ buổi sáng",
   "duration": 31,
   "calories": 150,
@@ -174,7 +180,13 @@ function saveApiConfig(config) {
 }
 
 function loadSystemPrompt() {
-  return safeStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT) || DEFAULT_SYSTEM_PROMPT;
+  const saved = safeStorage.getItem(STORAGE_KEYS.SYSTEM_PROMPT);
+  // Auto-upgrade if saved prompt was an older default prompt without action/update instructions
+  if (saved && !saved.includes('"action": "add"') && saved.includes('Bạn là Chuyên gia Dinh dưỡng & Huấn luyện viên Thể chất NutriAI thông minh')) {
+    safeStorage.setItem(STORAGE_KEYS.SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT);
+    return DEFAULT_SYSTEM_PROMPT;
+  }
+  return saved || DEFAULT_SYSTEM_PROMPT;
 }
 
 function saveSystemPrompt(promptText) {
@@ -230,6 +242,48 @@ function getDailyLog(dateStr) {
     };
   }
   return state.dailyLogs[dateStr];
+}
+
+function getCurrentDayDiaryContext(dateStr) {
+  const targetDate = dateStr || state.selectedDate || getTodayDateString();
+  const dayLog = state.dailyLogs[targetDate];
+  if (!dayLog) {
+    return `[NGỮ CẢNH NHẬT KÝ NGÀY (${targetDate}): Chưa có món ăn hay bài tập nào được ghi nhận]`;
+  }
+
+  const mealDefs = [
+    { key: "breakfast", name: "Bữa sáng" },
+    { key: "lunch", name: "Bữa trưa" },
+    { key: "dinner", name: "Bữa tối" },
+    { key: "snack", name: "Bữa phụ" }
+  ];
+
+  const mealParts = [];
+  mealDefs.forEach(def => {
+    const list = dayLog.meals?.[def.key] || [];
+    if (list.length > 0) {
+      const itemsText = list.map(i => `${i.name} (${i.calories} kcal)`).join(", ");
+      const totalCal = list.reduce((s, i) => s + (i.calories || 0), 0);
+      mealParts.push(`- ${def.name} (${totalCal} kcal): ${itemsText}`);
+    } else {
+      mealParts.push(`- ${def.name}: (Trống)`);
+    }
+  });
+
+  const actList = dayLog.activities || [];
+  let actText = "(Chưa có)";
+  if (actList.length > 0) {
+    const totalActCal = actList.reduce((s, a) => s + (a.calories || 0), 0);
+    actText = actList.map(a => `${a.name} (${a.duration}p, -${a.calories} kcal)`).join(", ") + ` [Tổng tiêu hao: -${totalActCal} kcal]`;
+  }
+
+  return `[DỮ LIỆU NHẬT KÝ SỨC KHỎE NGÀY ĐANG CHỌN (${targetDate}):
+${mealParts.join("\n")}
+- Hoạt động thể chất: ${actText}
+QUY TẮC QUAN TRỌNG:
+1. Khi người dùng nói "ăn thêm ... vào [bữa]", hãy trả về "action": "add" với CHỈ (những) món ăn thêm mới (không lặp lại các món cũ đã có trong nhật ký). Hoặc nếu bạn tổng hợp lại toàn bộ bữa ăn đầy đủ, hãy đặt "action": "update".
+2. Khi người dùng nói "sửa [bữa] thành..." hoặc "đổi [bữa] thành...", hãy trả về "action": "update" kèm danh sách đầy đủ tất cả các món mới của bữa đó.
+3. Khi người dùng nói "xóa [món] ở [bữa]" hoặc "bỏ [món]", hãy trả về "action": "delete" kèm món cần xóa (hoặc danh sách sau khi xóa với "action": "update").]`;
 }
 
 function loadChatMessages() {
@@ -453,22 +507,54 @@ function smartAnalyzeNutrition(userText) {
 
   const totalCalories = foundItems.reduce((sum, item) => sum + item.calories, 0);
 
+  const isAddExtra = lower.includes("ăn thêm") || lower.includes("thêm") || lower.includes("uống thêm");
+  const isUpdate = lower.includes("sửa") || lower.includes("thay đổi") || lower.includes("cập nhật") || lower.includes("đổi lại") || lower.includes("chỉnh lại");
+  const isDelete = lower.includes("xóa") || lower.includes("bỏ") || lower.includes("bớt") || lower.includes("không ăn");
+
+  let action = "add";
+  if (isDelete) action = "delete";
+  else if (isUpdate) action = "update";
+  else if (isAddExtra) action = "add";
+
+  let actionTitle = `Chào bạn! Mình đã phân tích **${mealType}** của bạn:\n\n`;
+  let actionNote = `${mealType} dinh dưỡng được phân tích và ghi nhận tự động.`;
+  let caloLabel = "Tổng lượng Calo nạp vào:";
+  let statusComment = `Mình đã tự động ghi nhận số calo này vào mục **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!`;
+
+  if (action === "update") {
+    actionTitle = `Chào bạn! Mình đã cập nhật lại **${mealType}** của bạn:\n\n`;
+    actionNote = `Đã cập nhật lại ${mealType} theo yêu cầu.`;
+    caloLabel = "Tổng lượng Calo bữa sau khi cập nhật:";
+    statusComment = `Mình đã tự động cập nhật lại toàn bộ mục **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!`;
+  } else if (action === "delete") {
+    actionTitle = `Mình đã ghi nhận yêu cầu xóa món khỏi **${mealType}** của bạn:\n\n`;
+    actionNote = `Xóa món khỏi ${mealType}.`;
+    caloLabel = "Lượng Calo điều chỉnh:";
+    statusComment = `Mình đã tự động xóa món này khỏi mục **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!`;
+  } else if (isAddExtra) {
+    actionTitle = `Tuyệt vời! Mình đã ghi nhận bạn ăn thêm món vào **${mealType}**:\n\n`;
+    actionNote = `Ăn thêm món vào ${mealType}.`;
+    caloLabel = "Lượng Calo ăn thêm:";
+    statusComment = `Mình đã tự động thêm món mới này vào **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!`;
+  }
+
   const mealLog = {
     type: "meal",
+    action,
     mealType,
     mealKey,
     items: foundItems,
     totalCalories,
-    notes: `${mealType} dinh dưỡng được phân tích và ghi nhận tự động.`
+    notes: actionNote
   };
 
-  let assistantText = `Chào bạn! Mình đã phân tích **${mealType}** của bạn:\n\n`;
+  let assistantText = actionTitle;
   assistantText += `🍽️ **Chi tiết các món ăn & Dinh dưỡng:**\n`;
   foundItems.forEach(it => {
     assistantText += `- **${it.name}:** ~${it.calories} kcal (${it.protein}g Protein, ${it.carbs}g Carbs, ${it.fat}g Fat)\n`;
   });
-  assistantText += `\n🔥 **Tổng lượng Calo nạp vào:** **${totalCalories} kcal**\n\n`;
-  assistantText += `💡 **Nhận xét dinh dưỡng:** Đây là bữa ăn cân đối. Mình đã tự động ghi nhận số calo này vào mục **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!\n\n`;
+  assistantText += `\n🔥 **${caloLabel}** **${totalCalories} kcal**\n\n`;
+  assistantText += `💡 **Nhận xét dinh dưỡng:** ${statusComment}\n\n`;
   assistantText += "```json:meal_log\n" + JSON.stringify(mealLog, null, 2) + "\n```";
 
   return { assistantText, mealLog, activityLog: null };
@@ -544,11 +630,13 @@ async function requestAiCompletion(messages) {
       }
     };
 
-    if (state.systemPrompt && state.systemPrompt.trim()) {
-      requestBody.systemInstruction = {
-        parts: [{ text: state.systemPrompt.trim() }]
-      };
-    }
+    const diaryContext = getCurrentDayDiaryContext(state.selectedDate);
+    const basePrompt = (state.systemPrompt && state.systemPrompt.trim()) ? state.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
+    const effectivePrompt = basePrompt + "\n\n" + diaryContext;
+
+    requestBody.systemInstruction = {
+      parts: [{ text: effectivePrompt }]
+    };
   } else {
     endpoint = cleanBase.endsWith("/chat/completions") ? cleanBase : `${cleanBase}/chat/completions`;
     headers = {
@@ -561,10 +649,14 @@ async function requestAiCompletion(messages) {
       headers["X-Title"] = "NutriAI Health Assistant";
     }
 
+    const diaryContext = getCurrentDayDiaryContext(state.selectedDate);
+    const basePrompt = (state.systemPrompt && state.systemPrompt.trim()) ? state.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
+    const effectivePrompt = basePrompt + "\n\n" + diaryContext;
+
     requestBody = {
       model: targetModel,
       messages: [
-        { role: "system", content: state.systemPrompt },
+        { role: "system", content: effectivePrompt },
         ...messages.slice(-10)
       ],
       temperature: parseFloat(temperature) || 0.5
@@ -689,6 +781,12 @@ function normalizeMealLog(raw) {
   else if (mType.includes("phụ") || mType.includes("phu") || mType.includes("vặt") || mType.includes("snack")) mealKey = "snack";
   else mealKey = "breakfast";
 
+  let action = (raw.action || "").toLowerCase().trim();
+  if (!["add", "update", "replace", "delete"].includes(action)) {
+    action = "add";
+  }
+  if (action === "replace") action = "update";
+
   const items = Array.isArray(raw.items) ? raw.items.map(it => ({
     name: it.name || "Món ăn",
     calories: parseInt(it.calories || it.cals || 0, 10),
@@ -701,6 +799,7 @@ function normalizeMealLog(raw) {
 
   return {
     type: "meal",
+    action,
     mealType: raw.mealType || "Bữa ăn",
     mealKey,
     items,
@@ -733,13 +832,41 @@ function extractActivityLog(responseText) {
 }
 
 function autoLogMealToHealthTracker(mealLog, dateStr) {
-  if (!mealLog || !mealLog.items || mealLog.items.length === 0) return;
+  if (!mealLog) return;
 
   const log = getDailyLog(dateStr);
   const targetMealList = log.meals[mealLog.mealKey];
+  if (!targetMealList) return;
 
-  mealLog.items.forEach(item => {
-    targetMealList.push({
+  const action = mealLog.action || "add";
+
+  // CASE 1: DELETE ACTION
+  if (action === "delete") {
+    if (!mealLog.items || mealLog.items.length === 0) {
+      log.meals[mealLog.mealKey] = [];
+      saveDailyLogs();
+      renderHealthTracker();
+      showToast(`🗑️ Đã xóa toàn bộ món trong ${mealLog.mealType}!`, "info");
+      return;
+    }
+
+    const deleteNames = mealLog.items.map(i => (i.name || "").toLowerCase().trim()).filter(Boolean);
+    const beforeLen = targetMealList.length;
+    log.meals[mealLog.mealKey] = targetMealList.filter(existing => {
+      const exName = (existing.name || "").toLowerCase().trim();
+      return !deleteNames.some(del => exName.includes(del) || del.includes(exName));
+    });
+
+    saveDailyLogs();
+    renderHealthTracker();
+    const removedCount = beforeLen - log.meals[mealLog.mealKey].length;
+    showToast(`🗑️ Đã xóa ${removedCount > 0 ? removedCount + " món" : "món"} khỏi ${mealLog.mealType}!`, "info");
+    return;
+  }
+
+  // CASE 2: UPDATE / REPLACE ACTION
+  if (action === "update") {
+    log.meals[mealLog.mealKey] = (mealLog.items || []).map(item => ({
       id: "meal_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
       name: item.name,
       calories: item.calories,
@@ -748,12 +875,65 @@ function autoLogMealToHealthTracker(mealLog, dateStr) {
       fat: item.fat || 0,
       isAiLogged: true,
       time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
-    });
-  });
+    }));
 
-  saveDailyLogs();
-  renderHealthTracker();
-  showToast(`🍽️ Đã tự động thêm ${mealLog.totalCalories} kcal (${mealLog.mealType}) vào Nhật Ký Sức Khỏe!`, "success");
+    saveDailyLogs();
+    renderHealthTracker();
+    showToast(`🔄 Đã cập nhật ${mealLog.mealType} (${mealLog.totalCalories} kcal) vào Nhật Ký Sức Khỏe!`, "success");
+    return;
+  }
+
+  // CASE 3: ADD ACTION (with smart full-meal-recap / deduplication detection)
+  if (!mealLog.items || mealLog.items.length === 0) return;
+
+  // Detect if AI gave us a full meal recap including previous items:
+  // e.g. targetMealList already has items and mealLog.items contains those existing items
+  let isFullMealRecap = false;
+  if (targetMealList.length > 0 && mealLog.items.length >= targetMealList.length) {
+    const matchCount = targetMealList.filter(oldItem => {
+      const oldClean = (oldItem.name || "").toLowerCase().trim();
+      return mealLog.items.some(newItem => {
+        const newClean = (newItem.name || "").toLowerCase().trim();
+        return newClean.includes(oldClean) || oldClean.includes(newClean);
+      });
+    }).length;
+
+    if (matchCount >= targetMealList.length || (targetMealList.length > 1 && matchCount >= 2)) {
+      isFullMealRecap = true;
+    }
+  }
+
+  if (isFullMealRecap) {
+    log.meals[mealLog.mealKey] = mealLog.items.map(item => ({
+      id: "meal_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+      name: item.name,
+      calories: item.calories,
+      protein: item.protein || 0,
+      carbs: item.carbs || 0,
+      fat: item.fat || 0,
+      isAiLogged: true,
+      time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+    }));
+    saveDailyLogs();
+    renderHealthTracker();
+    showToast(`🔄 Đã cập nhật ${mealLog.mealType} (${mealLog.totalCalories} kcal) vào Nhật Ký!`, "success");
+  } else {
+    mealLog.items.forEach(item => {
+      targetMealList.push({
+        id: "meal_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+        name: item.name,
+        calories: item.calories,
+        protein: item.protein || 0,
+        carbs: item.carbs || 0,
+        fat: item.fat || 0,
+        isAiLogged: true,
+        time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+      });
+    });
+    saveDailyLogs();
+    renderHealthTracker();
+    showToast(`🍽️ Đã thêm ${mealLog.totalCalories} kcal vào ${mealLog.mealType}!`, "success");
+  }
 }
 
 function autoLogActivityToHealthTracker(actLog, dateStr) {
@@ -853,14 +1033,31 @@ function createMealActionCard(mealLog) {
     `;
   });
 
+  let badgeText = `🍽️ ${escapeHtml(mealLog.mealType)}`;
+  let badgeClass = "meal-action-badge";
+  let statusText = "Đã ghi vào Sức Khỏe";
+  let statusClass = "meal-action-status";
+
+  if (mealLog.action === "update") {
+    badgeText = `🔄 Cập nhật: ${escapeHtml(mealLog.mealType)}`;
+    badgeClass = "meal-action-badge update";
+    statusText = "Đã cập nhật lại bữa";
+    statusClass = "meal-action-status update";
+  } else if (mealLog.action === "delete") {
+    badgeText = `🗑️ Xóa: ${escapeHtml(mealLog.mealType)}`;
+    badgeClass = "meal-action-badge delete";
+    statusText = "Đã xóa khỏi nhật ký";
+    statusClass = "meal-action-status delete";
+  }
+
   card.innerHTML = `
     <div class="meal-action-header">
-      <div class="meal-action-badge">
-        <span>🍽️ ${escapeHtml(mealLog.mealType)}</span>
+      <div class="${badgeClass}">
+        <span>${badgeText}</span>
       </div>
-      <div class="meal-action-status">
+      <div class="${statusClass}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        <span>Đã ghi vào Sức Khỏe</span>
+        <span>${statusText}</span>
       </div>
     </div>
 
@@ -1316,8 +1513,11 @@ function renderMealBlocks(meals) {
               <span style="font-weight:600;">${escapeHtml(item.name)}</span>
               ${item.isAiLogged ? `<span class="ai-logged-badge" title="Được ghi tự động từ Trợ lý Chat AI">✨ AI ghi nhận</span>` : ""}
             </div>
-            <div style="display:flex; align-items:center; gap:0.6rem;">
+            <div style="display:flex; align-items:center; gap:0.4rem;">
               <span style="font-weight:700; color:#f59e0b;">+${item.calories} kcal</span>
+              <button type="button" class="btn-edit-row" title="Chỉnh sửa món này" onclick="openEditFoodModal('${def.key}', ${idx})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              </button>
               <button type="button" class="btn-delete-row" title="Xóa món này" onclick="deleteFoodItem('${def.key}', ${idx})">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
@@ -1355,6 +1555,81 @@ function deleteFoodItem(mealKey, index) {
     renderHealthTracker();
     showToast("Đã xóa món ăn khỏi nhật ký.", "info");
   }
+}
+
+function openEditFoodModal(mealKey, index) {
+  const dayLog = getDailyLog(state.selectedDate);
+  const item = dayLog.meals?.[mealKey]?.[index];
+  if (!item) return;
+
+  const modal = document.getElementById("modal-edit-food");
+  const selectMeal = document.getElementById("edit-food-meal");
+  const inputName = document.getElementById("edit-food-name");
+  const inputCal = document.getElementById("edit-food-cal");
+  const inputOrigMeal = document.getElementById("edit-food-orig-meal");
+  const inputOrigIndex = document.getElementById("edit-food-orig-index");
+
+  if (selectMeal) selectMeal.value = mealKey;
+  if (inputName) inputName.value = item.name || "";
+  if (inputCal) inputCal.value = item.calories !== undefined ? item.calories : 0;
+  if (inputOrigMeal) inputOrigMeal.value = mealKey;
+  if (inputOrigIndex) inputOrigIndex.value = index;
+
+  if (modal) modal.classList.add("open");
+}
+
+function closeEditFoodModal() {
+  const modal = document.getElementById("modal-edit-food");
+  if (modal) modal.classList.remove("open");
+  const form = document.getElementById("form-edit-food");
+  if (form) form.reset();
+}
+
+function handleSaveEditFood(e) {
+  e.preventDefault();
+  const origMealKey = document.getElementById("edit-food-orig-meal")?.value;
+  const origIndex = parseInt(document.getElementById("edit-food-orig-index")?.value, 10);
+  const newMealKey = document.getElementById("edit-food-meal")?.value;
+  const newName = document.getElementById("edit-food-name")?.value.trim();
+  const newCal = parseInt(document.getElementById("edit-food-cal")?.value, 10) || 0;
+
+  if (!newName) return;
+
+  const dayLog = getDailyLog(state.selectedDate);
+  const origList = dayLog.meals?.[origMealKey];
+  if (!origList || origList[origIndex] === undefined) {
+    closeEditFoodModal();
+    return;
+  }
+
+  const existingItem = origList[origIndex];
+
+  if (origMealKey === newMealKey) {
+    existingItem.name = newName;
+    existingItem.calories = newCal;
+  } else {
+    origList.splice(origIndex, 1);
+    if (!dayLog.meals[newMealKey]) dayLog.meals[newMealKey] = [];
+    dayLog.meals[newMealKey].push({
+      ...existingItem,
+      name: newName,
+      calories: newCal
+    });
+  }
+
+  saveDailyLogs();
+  renderHealthTracker();
+  closeEditFoodModal();
+  showToast(`Đã cập nhật món "${newName}" (${newCal} kcal)!`, "success");
+}
+
+function handleDeleteFromEditModal() {
+  const origMealKey = document.getElementById("edit-food-orig-meal")?.value;
+  const origIndex = parseInt(document.getElementById("edit-food-orig-index")?.value, 10);
+  if (origMealKey && !isNaN(origIndex)) {
+    deleteFoodItem(origMealKey, origIndex);
+  }
+  closeEditFoodModal();
 }
 
 function renderHistoryChart() {
@@ -2196,6 +2471,29 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
       renderHealthTracker();
       closeAddFoodModal();
       showToast(`Đã thêm "${name}" (+${cal} kcal) vào nhật ký.`, "success");
+    });
+  }
+
+  const btnCloseEditFood = document.getElementById("btn-close-edit-food-modal");
+  const btnCancelEditFood = document.getElementById("btn-cancel-edit-food-modal");
+  const btnDeleteFromEdit = document.getElementById("btn-delete-from-edit-modal");
+  const formEditFood = document.getElementById("form-edit-food");
+  const modalEditFood = document.getElementById("modal-edit-food");
+
+  if (btnCloseEditFood) btnCloseEditFood.addEventListener("click", closeEditFoodModal);
+  if (btnCancelEditFood) btnCancelEditFood.addEventListener("click", closeEditFoodModal);
+  if (btnDeleteFromEdit) btnDeleteFromEdit.addEventListener("click", handleDeleteFromEditModal);
+  if (formEditFood) formEditFood.addEventListener("submit", handleSaveEditFood);
+  if (modalEditFood) {
+    modalEditFood.addEventListener("click", e => {
+      if (e.target === modalEditFood) closeEditFoodModal();
+    });
+  }
+
+  const modalAddFood = document.getElementById("modal-add-food");
+  if (modalAddFood) {
+    modalAddFood.addEventListener("click", e => {
+      if (e.target === modalAddFood) closeAddFoodModal();
     });
   }
 

@@ -480,6 +480,16 @@ body {
   border-radius: var(--radius-full);
 }
 
+.meal-action-badge.update {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.meal-action-badge.delete {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
 .meal-action-status {
   font-size: 0.75rem;
   font-weight: 600;
@@ -487,6 +497,14 @@ body {
   display: flex;
   align-items: center;
   gap: 0.3rem;
+}
+
+.meal-action-status.update {
+  color: #3b82f6;
+}
+
+.meal-action-status.delete {
+  color: #ef4444;
 }
 
 .meal-items-table {
@@ -1125,6 +1143,24 @@ body {
 .btn-delete-row:hover {
   color: var(--color-danger);
   background: var(--color-danger-bg);
+}
+
+.btn-edit-row {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-edit-row:hover {
+  color: var(--accent-primary);
+  background: var(--accent-primary-light);
 }
 
 .meals-container {

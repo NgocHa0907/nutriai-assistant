@@ -732,6 +732,57 @@
     </div>
   </div>
 
+  <!-- Modal 1.5: Chỉnh Sửa Món Ăn (Update Food) -->
+  <div id="modal-edit-food" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Chỉnh Sửa Món Ăn</h3>
+        <button id="btn-close-edit-food-modal" class="modal-close-btn" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <form id="form-edit-food">
+        <input type="hidden" id="edit-food-orig-meal" value="">
+        <input type="hidden" id="edit-food-orig-index" value="">
+
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label class="form-label" for="edit-food-meal">Bữa ăn</label>
+          <select id="edit-food-meal" class="form-select">
+            <option value="breakfast">Bữa sáng</option>
+            <option value="lunch">Bữa trưa</option>
+            <option value="dinner">Bữa tối</option>
+            <option value="snack">Bữa phụ / Ăn vặt</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label class="form-label" for="edit-food-name">Tên món ăn hoặc thức uống</label>
+          <input type="text" id="edit-food-name" class="form-input" placeholder="Ví dụ: 1 bát phở bò, 2 quả trứng..." required>
+        </div>
+
+        <div class="form-group" style="margin-bottom:1.25rem;">
+          <label class="form-label" for="edit-food-cal">Lượng Calo (kcal)</label>
+          <input type="number" id="edit-food-cal" class="form-input" placeholder="Ví dụ: 260" min="0" required>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <button type="button" id="btn-delete-from-edit-modal" class="btn-subtle" style="color:var(--color-danger);" title="Xóa món này">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <span>Xóa món</span>
+          </button>
+          <div style="display:flex; gap:0.5rem;">
+            <button type="button" id="btn-cancel-edit-food-modal" class="btn-secondary">Hủy</button>
+            <button type="submit" class="btn-primary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span>Lưu Thay Đổi</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal 2: Xem Prompt Chi Tiết Từ Chat -->
   <div id="modal-view-prompt" class="modal-overlay">
     <div class="modal-card" style="max-width: 650px;">
