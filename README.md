@@ -39,6 +39,7 @@ curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lates
   - Tính tổng năng lượng nạp vào: **260 kcal**.
   - Đính kèm thẻ món ăn trực quan ngay trong tin nhắn chat.
   - **Tự động ghi nhận ngay vào mục Bữa Sáng trên Trang Theo Dõi Sức Khỏe**.
+- **Tùy biến tính cách AI (AI Persona)**: Dễ dàng lựa chọn giữa 6 phong cách trò chuyện độc đáo (😊 Vui vẻ, 😤 Giận dữ / "Chửi yêu", 🥺 Buồn bã / U sầu, 🫡 Kỷ luật thép, 🌸 Dịu dàng, 🤣 Hài hước), đổi tính cách tức thì ngay trên thanh Chat hoặc trang Cài Đặt.
 - **Gợi ý nhanh 1 chạm**: Các bữa ăn phổ biến (Phở bò, Bún bò Huế, Trà sữa, Ức gà...).
 - **Xem & Tùy biến Prompt**: Cho phép xem và chỉnh sửa System Prompt chỉ dẫn AI.
 

@@ -142,6 +142,7 @@ async function uploadAllDataToCloud(uid) {
       chatMessages: typeof state !== 'undefined' ? state.chatMessages.filter(function(m) { return !m.isTyping; }) : JSON.parse(safeStorage.getItem('nutriai_chat_messages') || '[]'),
       apiConfig: typeof state !== 'undefined' ? state.apiConfig : JSON.parse(safeStorage.getItem('nutriai_api_config') || '{}'),
       systemPrompt: typeof state !== 'undefined' ? state.systemPrompt : (safeStorage.getItem('nutriai_system_prompt') || ''),
+      personality: typeof state !== 'undefined' ? state.personality : (safeStorage.getItem('nutriai_personality') || 'cheerful'),
       theme: safeStorage.getItem('nutriai_theme') || 'light',
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -186,6 +187,11 @@ async function downloadDataFromCloud(uid) {
       if (typeof state !== 'undefined') state.systemPrompt = data.systemPrompt;
       hasData = true;
     }
+    if (data.personality) {
+      safeStorage.setItem('nutriai_personality', data.personality);
+      if (typeof state !== 'undefined') state.personality = data.personality;
+      hasData = true;
+    }
     if (data.theme) {
       safeStorage.setItem('nutriai_theme', data.theme);
       document.documentElement.setAttribute('data-theme', data.theme);
@@ -194,6 +200,7 @@ async function downloadDataFromCloud(uid) {
       renderChatMessages();
       renderHealthTracker();
       syncApiSettingsUI();
+      if (typeof renderPersonalityUI === 'function') renderPersonalityUI();
     }
     return hasData;
   } catch (err) {
@@ -399,7 +406,8 @@ function exportDataAsJson() {
       ? state.chatMessages.filter(function(m) { return !m.isTyping; })
       : JSON.parse(safeStorage.getItem('nutriai_chat_messages') || '[]'),
     apiConfig: typeof state !== 'undefined' ? state.apiConfig : JSON.parse(safeStorage.getItem('nutriai_api_config') || '{}'),
-    systemPrompt: typeof state !== 'undefined' ? state.systemPrompt : (safeStorage.getItem('nutriai_system_prompt') || '')
+    systemPrompt: typeof state !== 'undefined' ? state.systemPrompt : (safeStorage.getItem('nutriai_system_prompt') || ''),
+    personality: typeof state !== 'undefined' ? state.personality : (safeStorage.getItem('nutriai_personality') || 'cheerful')
   };
 
   var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -445,10 +453,15 @@ function importDataFromJson(event) {
         safeStorage.setItem('nutriai_system_prompt', data.systemPrompt);
         if (typeof state !== 'undefined') state.systemPrompt = data.systemPrompt;
       }
+      if (data.personality) {
+        safeStorage.setItem('nutriai_personality', data.personality);
+        if (typeof state !== 'undefined') state.personality = data.personality;
+      }
 
       if (typeof renderChatMessages === 'function') renderChatMessages();
       if (typeof renderHealthTracker === 'function') renderHealthTracker();
       if (typeof syncApiSettingsUI === 'function') syncApiSettingsUI();
+      if (typeof renderPersonalityUI === 'function') renderPersonalityUI();
 
       if (currentUser) syncToCloudIfLoggedIn();
 

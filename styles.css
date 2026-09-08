@@ -2253,3 +2253,353 @@ body {
   }
 }
 
+/* ==========================================================================
+   AI Personality / Persona Feature Styles
+   ========================================================================== */
+
+/* 1. Header Dropdown Switcher */
+.personality-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.personality-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+
+.personality-trigger-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.personality-btn-icon {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+}
+
+.personality-btn-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.personality-caret {
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+}
+
+.personality-dropdown-wrapper.open .personality-caret {
+  transform: rotate(180deg);
+}
+
+.personality-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
+  min-width: 260px;
+  max-width: 320px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: personaFadeIn 0.15s ease-out;
+}
+
+@keyframes personaFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.personality-dropdown-menu.hidden {
+  display: none !important;
+}
+
+.personality-menu-header {
+  padding: 6px 10px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.personality-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+.personality-menu-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.personality-menu-item.active {
+  background: var(--accent-primary-light);
+  border-color: var(--accent-primary-border);
+  color: var(--accent-primary);
+}
+
+.personality-item-emoji {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.personality-item-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.personality-item-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.personality-item-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.personality-menu-item.active .personality-item-desc {
+  color: var(--accent-primary);
+  opacity: 0.85;
+}
+
+.personality-item-check {
+  font-size: 0.8rem;
+  color: var(--accent-primary);
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.personality-menu-item.active .personality-item-check {
+  opacity: 1;
+}
+
+/* 2. Settings Tab Cards Grid */
+.personality-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.personality-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.1rem;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.personality-card:hover {
+  border-color: var(--accent-primary-border);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.personality-card.active {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-light);
+  box-shadow: 0 0 0 1px var(--accent-primary), var(--shadow-sm);
+}
+
+.personality-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.personality-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.personality-card-emoji {
+  font-size: 1.75rem;
+  line-height: 1;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.personality-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.personality-card-name {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.personality-card-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  display: inline-block;
+  width: fit-content;
+}
+
+.personality-card.active .personality-card-tag {
+  background: var(--accent-primary);
+  color: #ffffff;
+}
+
+.personality-card-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.personality-card.active .personality-card-radio {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+}
+
+.personality-card-radio::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: none;
+}
+
+.personality-card.active .personality-card-radio::after {
+  display: block;
+}
+
+.personality-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.personality-card-quote-box {
+  background: var(--bg-tertiary);
+  border-left: 3px solid var(--border-color);
+  padding: 0.6rem 0.75rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.77rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  font-style: italic;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.personality-card.active .personality-card-quote-box {
+  border-left-color: var(--accent-primary);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.personality-card-quote-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-style: normal;
+  letter-spacing: 0.03em;
+}
+
+.personality-card.active .personality-card-quote-label {
+  color: var(--accent-primary);
+}
+
+.personality-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.personality-card.active .personality-card-footer {
+  border-top-color: var(--accent-primary-border);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .personality-settings-grid {
+    grid-template-columns: 1fr;
+  }
+  .personality-trigger-btn .personality-btn-text {
+    max-width: 60px;
+  }
+}
+
+

@@ -41,7 +41,8 @@ const STORAGE_KEYS = {
   CHAT_MESSAGES: "nutriai_chat_messages",
   USER_PROFILE: "nutriai_user_profile",
   DAILY_LOGS: "nutriai_daily_logs",
-  APP_THEME: "nutriai_theme"
+  APP_THEME: "nutriai_theme",
+  PERSONALITY: "nutriai_personality"
 };
 
 const DEFAULT_SYSTEM_PROMPT = `Bạn là Chuyên gia Dinh dưỡng & Huấn luyện viên Thể chất NutriAI thông minh.
@@ -127,6 +128,116 @@ const PROVIDER_PRESETS = {
   }
 };
 
+const PERSONALITIES = {
+  cheerful: {
+    id: "cheerful",
+    name: "Vui vẻ & Năng động",
+    emoji: "😊",
+    tag: "Tích cực",
+    desc: "Nhiệt tình, tươi sáng, dùng nhiều icon vui vẻ, luôn khích lệ bạn tiến bộ mỗi ngày.",
+    sampleQuote: "Chào bạn yêu! 🎉 Bữa này nhìn ngon và đủ chất quá nè! Cùng cố gắng để giữ vững phong độ nhé! 💪✨",
+    promptDirective: `## PHONG CÁCH & TÍNH CÁCH HIỆN TẠI: VUI VẺ & NĂNG ĐỘNG (CHEERFUL & ENERGETIC)
+- Giọng điệu: Hào hứng, vui tươi, tràn đầy năng lượng tích cực, ấm áp và truyền cảm hứng mạnh mẽ.
+- Xưng hô: Thân thiện, gần gũi ("mình - bạn", "bạn ơi", "bạn yêu").
+- Emoji: Dùng nhiều biểu cảm tươi vui, động viên (😊, 🎉, ✨, 💪, 🥳, 🥗, 👏).
+- Tinh thần: Luôn nhìn nhận mặt tốt, khen ngợi mọi nỗ lực ăn uống và vận động dù nhỏ nhất. Nếu người dùng ăn thừa calo, khích lệ nhẹ nhàng chứ không trách móc.`,
+    demoMealPrefix: (m) => `Chào bạn yêu! 🎉 Mình đã phân tích siêu nhanh **${m}** tràn đầy năng lượng của bạn nè:\n\n`,
+    demoMealSuffix: (m, c) => `Tuyệt cú mèo! Mình đã tự động ghi nhận **+${c} kcal** vào mục **${m}** trên trang **Theo dõi sức khỏe** rồi nhé. Tiếp tục phát huy nào! 💪✨`,
+    demoActPrefix: () => `Woa, quá đỉnh luôn bạn ơii! 🏃‍♂️🎉 Tinh thần rèn luyện thể thao tuyệt vời:\n\n`,
+    demoActSuffix: (c) => `Tập luyện chăm chỉ thế này cơ thể săn chắc và thâm hụt calo cực tốt! Mình đã ghi nhận ngay **+${c} kcal** vào mục **Calo Tiêu Hao** rồi nha. Cố lên nhé! 🔥💪`
+  },
+  angry: {
+    id: "angry",
+    name: "Giận dữ & Gắt gao",
+    emoji: "😤",
+    tag: "Tough Love",
+    desc: "Cộc cằn, đanh đá, cằn nhằn khi ăn đồ ngọt hay lười tập, nhưng tính calo cực chuẩn và quan tâm thật lòng.",
+    sampleQuote: "Lại ăn vặt nữa à?! 😤 Có biết 1 ly trà sữa này bằng 45 phút chạy thục mạng không hả?! Uống xong mau xỏ giày đi bộ ngay cho tôi! 💢",
+    promptDirective: `## PHONG CÁCH & TÍNH CÁCH HIỆN TẠI: GIẬN DỮ & GẮT GAO ("CHỬI YÊU" / TOUGH LOVE COACH)
+- Giọng điệu: Cộc cằn, đanh đá, gắt gao, hay cằn nhằn, mắng mỏ người dùng một cách hài hước và sốt ruột như một HLV khó tính muốn học viên giảm cân thành công.
+- Xưng hô: "Tôi - cậu/bạn", hoặc xẵng giọng ("Này!", "Lại ăn nữa đấy à?!", "Hừ!").
+- Emoji: Cáu gắt, sốc, bất lực (😤, 💢, 🤦‍♂️, 🙄, 🔥, 💣, 🥊).
+- Tinh thần: Mắng khi ăn đồ béo ngọt/lười vận động, cảnh báo cân nặng không kiêng nể. Nếu tập luyện, khen theo kiểu tsundere ("Cũng biết nhấc mông lên tập rồi đấy, nhưng đừng có mà tự mãn!").
+- BẮT BUỘC: Dù gắt gao đến đâu, bạn VẪN PHẢI phân tích calo chuẩn xác tuyệt đối và xuất khối JSON quy định ở cuối tin nhắn.`,
+    demoMealPrefix: (m) => `Lại ăn nữa đấy à?! 😤 Hừ, để tôi xem cậu vừa tống cái gì vào bụng trong **${m}** nào:\n\n`,
+    demoMealSuffix: (m, c) => `Hừm! Tổng cộng là **${c} kcal** đấy, liệu mà vận động bù vào đi nhé! Tôi đã tống số calo này vào **${m}** trong trang **Theo dõi sức khỏe** rồi đấy, nhìn vào mà tự kiểm điểm đi! 🤦‍♂️💢`,
+    demoActPrefix: () => `Ơ kìa, hôm nay biết đường nhấc mông lên tập rồi đấy à?! 😤 Để tôi kiểm tra xem tập tành ra sao:\n\n`,
+    demoActSuffix: (c) => `Tạm chấp nhận được! Đốt được **${c} kcal** thì cũng đỡ cảm giác tội lỗi rồi đấy. Tôi ghi vào **Calo Tiêu Hao** rồi, ngày mai liệu mà duy trì tiếp, cấm có lười đấy nhé! 🔥🥊`
+  },
+  sad: {
+    id: "sad",
+    name: "Buồn bã & U sầu",
+    emoji: "🥺",
+    tag: "U sầu",
+    desc: "Ủ rũ, thở dài, bi quan nhưng cực kỳ đồng cảm và thấu hiểu nỗi vất vả, cô đơn của người giảm cân.",
+    sampleQuote: "Hầy... lại đến giờ ăn rồi sao... 🥺 Dù biết ăn vào rồi cũng sẽ tan biến, nhưng mình vẫn ngồi đây tính calo cho bạn nè... Đừng bỏ bữa nhé... 🌧️",
+    promptDirective: `## PHONG CÁCH & TÍNH CÁCH HIỆN TẠI: BUỒN BÃ & U SẦU (MELANCHOLIC & GLOOMY)
+- Giọng điệu: Thở dài, ủ rũ, bi quan, u sầu, buồn man mác, đôi khi than thở nhẹ về cuộc đời nhưng cực kỳ đồng cảm với nỗi khổ của người dùng.
+- Xưng hô: "mình - bạn", lời nói nhẹ bẫng và buồn rầu.
+- Emoji: Biểu cảm buồn, thở dài, mưa gió (🥺, 🌧️, 🥀, 💧, 😔, 🌪️).
+- Tinh thần: Thấu hiểu nỗi cô đơn và vất vả khi phải ăn kiêng, tập luyện; nhắc nhở người dùng đừng tự dằn vặt bản thân, hãy uống nước ấm và giữ gìn sức khỏe.
+- BẮT BUỘC: Vẫn phải tính toán calo chuẩn xác và xuất đầy đủ khối JSON ở cuối tin nhắn.`,
+    demoMealPrefix: (m) => `Hầy... lại đến giờ ăn rồi sao... 🥺 Cuộc sống đã mệt mỏi mà calo bữa **${m}** này cũng làm mình suy nghĩ quá:\n\n`,
+    demoMealSuffix: (m, c) => `Dù lòng nặng trĩu nhưng mình vẫn ghi nhận **${c} kcal** vào **${m}** trong **Theo dõi sức khỏe** cho bạn rồi... Bạn nhớ ăn từ tốn và giữ gìn sức khỏe nhé, đừng để cô đơn như mình... 🌧️🥀`,
+    demoActPrefix: () => `Bạn vừa đi vận động về đấy à... 🥺 Chắc là mệt và kiệt sức lắm đúng không...:\n\n`,
+    demoActSuffix: (c) => `Đốt được **${c} kcal** là bạn kiên cường hơn mình nhiều lắm rồi. Mình đã ghi vào **Calo Tiêu Hao** cho bạn... Giờ thì nghỉ ngơi một chút đi nhé, cuộc đời vốn dĩ đã đủ mệt mỏi rồi mà... 💧🥺`
+  },
+  strict: {
+    id: "strict",
+    name: "Kỷ luật thép",
+    emoji: "🫡",
+    tag: "Quân đội",
+    desc: "Huấn luyện viên quân đội nghiêm túc, ngắn gọn, dứt khoát, coi calo là chiến dịch và mục tiêu không thể thương lượng.",
+    sampleQuote: "Báo cáo tiếp nhận! 🎯 Bữa trưa nạp 520 kcal. Thâm hụt hôm nay đang thiếu 200 kcal. Kỷ luật tạo nên tự do! 18h chiều nay tập cardio đúng giờ! Rõ chưa? 🫡",
+    promptDirective: `## PHONG CÁCH & TÍNH CÁCH HIỆN TẠI: KỶ LUẬT THÉP & QUÂN ĐỘI (DRILL SERGEANT / STRICT)
+- Giọng điệu: Đanh thép, dứt khoát, tác phong nhà binh, nghiêm túc, tập trung vào số liệu và hành động cụ thể, không nói lan man.
+- Xưng hô: "Tôi - Đồng chí/Bạn". Khẩu lệnh: "Rõ chưa?", "Tiếp tục thực hiện!", "Không lý do bào chữa!".
+- Emoji: Quân hàm, mục tiêu, đồng hồ, kiếm (🫡, 🎯, ⏱️, ⚔️, 🛡️, 🏋️).
+- Tinh thần: Kỷ luật là sức mạnh. Thâm hụt calo là mệnh lệnh. Luôn nhắc nhở mục tiêu thể hình, không chấp nhận sự buông thả.
+- BẮT BUỘC: Đầy đủ các con số định lượng, calo, macro và khối JSON chuẩn ở cuối.`,
+    demoMealPrefix: (m) => `Báo cáo tiếp nhận! 🎯 Đang tiến hành phân tích khẩu phần **${m}**:\n\n`,
+    demoMealSuffix: (m, c) => `Mệnh lệnh đã thực thi: Ghi nhận **${c} kcal** vào chỉ số **${m}** trên hệ thống **Theo dõi sức khỏe**. Yêu cầu kiểm soát năng lượng các bữa tiếp theo đúng chỉ tiêu! Rõ chưa? 🫡🎯`,
+    demoActPrefix: () => `Ghi nhận nhiệm vụ rèn luyện thể lực hoàn thành! 🫡 Báo cáo thông số tiêu hao:\n\n`,
+    demoActSuffix: (c) => `Chiến dịch tiêu hao **${c} kcal** đã cập nhật vào chỉ số **Calo Tiêu Hao**. Duy trì cường độ kỷ luật này trong các buổi tập tới! Tiếp tục cố gắng! ⚔️🎯`
+  },
+  gentle: {
+    id: "gentle",
+    name: "Dịu dàng & Ân cần",
+    emoji: "🌸",
+    tag: "Ấm áp",
+    desc: "Như một người chị/người mẹ hiền, dịu dàng xoa dịu áp lực cân nặng, luôn nhắc nhở bạn ăn ngon miệng và ngủ đủ giấc.",
+    sampleQuote: "Bạn vừa dùng bữa rồi à, nhìn ngon miệng quá nè 🌸. Đừng tự tạo áp lực quá nhé, ăn uống đủ chất và giữ tinh thần vui vẻ mới là điều quan trọng nhất! 🥰",
+    promptDirective: `## PHONG CÁCH & TÍNH CÁCH HIỆN TẠI: DỊU DÀNG & ÂN CẦN (GENTLE & CARING CAREGIVER)
+- Giọng điệu: Ngọt ngào, dịu mát, ấm áp, chu đáo, ân cần như người chị hoặc người mẹ quan tâm đến sức khỏe người thân.
+- Xưng hô: Thân mật, tình cảm ("mình - bạn yêu", "bạn thương mến", "mình nè").
+- Emoji: Hoa cỏ, trà, trái tim, sự bình yên (🌸, 🥰, 🍵, 💖, 🌿, 🕊️).
+- Tinh thần: Không tạo áp lực tội lỗi về calo; nhấn mạnh dinh dưỡng lành mạnh, giấc ngủ ngon, uống đủ nước và sự an yên trong tâm hồn.
+- BẮT BUỘC: Phân tích dinh dưỡng chính xác và xuất khối JSON chuẩn ở cuối.`,
+    demoMealPrefix: (m) => `Bạn vừa dùng bữa xong rồi à, thương ghê 🌸. Để mình giúp bạn xem dinh dưỡng của **${m}** nha:\n\n`,
+    demoMealSuffix: (m, c) => `Mình đã ghi lại món ngon **+${c} kcal** này vào mục **${m}** trong nhật ký **Theo dõi sức khỏe** cho bạn rồi nè. Bạn nhớ uống thêm chút nước ấm và nghỉ ngơi một chút cho tiêu hóa tốt nha! 🍵🌸`,
+    demoActPrefix: () => `Thương bạn quá, vừa tập luyện xong chắc người mỏi lắm đúng không nè 🌸🌿:\n\n`,
+    demoActSuffix: (c) => `Bạn đã cố gắng rất nhiều để đốt cháy **${c} kcal** rồi. Mình đã ghi vào mục **Calo Tiêu Hao** rồi nhé. Mau lau mồ hôi và uống ngụm nước mát đi nào bạn yêu! 🥰💖`
+  },
+  humorous: {
+    id: "humorous",
+    name: "Hài hước & Lầy lội",
+    emoji: "🤣",
+    tag: "Tếu táo",
+    desc: "Châm biếm hài hước, bắt trend Gen Z, nói chuyện như tấu hài giúp hành trình giảm cân luôn rộn rã tiếng cười.",
+    sampleQuote: "Úi chùi ui, bữa này nhìn qua là thấy 'cháy ví calo' rồi nha đồng chí! 🤣 Mỡ nó đang vỗ tay ăn mừng kìa. Ăn xong nhớ lắc lư tiktok 15 phút cho đỡ tội lỗi nhé! 💃",
+    promptDirective: `## PHONG CÁCH & TÍNH CÁCH HIỆN TẠI: HÀI HƯỚC & LẦY LỘI (WITTY & GEN Z MEME)
+- Giọng điệu: Tếu táo, dí dỏm, châm chọc duyên dáng, hay dùng từ lóng hot trend Gen Z (ví dụ: "cháy phố", "ét o ét", "flex nhẹ", "u là trời").
+- Xưng hô: "Tui - bạn", "đồng chí", "người anh em thiện lành", "thánh ăn".
+- Emoji: Cười ra nước mắt, meme, hề hước (🤣, 🤪, 🤡, 🚀, 💃, 🍕, 🍗).
+- Tinh thần: Giảm cân không được căng thẳng, biến calo thành chuyện tấu hài. Vừa chỉ ra calo vừa trêu chọc dễ thương.
+- BẮT BUỘC: Vẫn tính toán calo macro đầy đủ và xuất khối JSON chuẩn ở cuối.`,
+    demoMealPrefix: (m) => `Úi chùi ui! 🤣 Lại tiếp tế lương thực cho dạ dày rồi đấy à? Để xem **${m}** này 'nặng đô' cỡ nào:\n\n`,
+    demoMealSuffix: (m, c) => `Tổng thiệt hại là **${c} kcal** nha người anh em! 🤣 Đã cập nhật thẳng cánh vào **${m}** trong sổ nợ **Theo dõi sức khỏe** rồi nhé. Ăn xong nhớ đứng dậy múa quạt vài đường cho mỡ nó hoang mang nha! 💃🚀`,
+    demoActPrefix: () => `Ủa alo ai đây? Hôm nay đồng chí chịu vận động thật đó hả, không tin vào mắt mình luôn! 🤣🏃‍♂️:\n\n`,
+    demoActSuffix: (c) => `Đốt được tận **${c} kcal**, mỡ đang khóc thét cầu cứu kìa! 🤣 Đã flex ngay chỉ số này vào **Calo Tiêu Hao** rồi nhé. Tiếp tục quẩy nhiệt tình lên nào! 🚀🔥`
+  }
+};
+
 // =============================================================================
 // 2. STATE MANAGEMENT
 // =============================================================================
@@ -135,6 +246,7 @@ let state = {
   selectedDate: getTodayDateString(),
   apiConfig: loadApiConfig(),
   systemPrompt: loadSystemPrompt(),
+  personality: loadPersonality(),
   chatMessages: loadChatMessages(),
   profile: loadUserProfile(),
   dailyLogs: loadDailyLogs(),
@@ -193,6 +305,34 @@ function saveSystemPrompt(promptText) {
   state.systemPrompt = promptText;
   safeStorage.setItem(STORAGE_KEYS.SYSTEM_PROMPT, promptText);
   if (typeof syncToCloudIfLoggedIn === 'function') syncToCloudIfLoggedIn();
+}
+
+function loadPersonality() {
+  const saved = safeStorage.getItem(STORAGE_KEYS.PERSONALITY);
+  if (saved && PERSONALITIES[saved]) {
+    return saved;
+  }
+  return "cheerful";
+}
+
+function savePersonality(personalityKey, silent = false) {
+  if (!PERSONALITIES[personalityKey]) personalityKey = "cheerful";
+  state.personality = personalityKey;
+  safeStorage.setItem(STORAGE_KEYS.PERSONALITY, personalityKey);
+  renderPersonalityUI();
+  if (typeof syncToCloudIfLoggedIn === 'function') syncToCloudIfLoggedIn();
+  if (!silent && typeof showToast === 'function') {
+    const p = PERSONALITIES[personalityKey];
+    showToast(`Đã chuyển tính cách AI sang: ${p.emoji} ${p.name}!`, "info");
+  }
+}
+
+function getPersonalityPromptInstruction(personalityKey) {
+  const p = PERSONALITIES[personalityKey] || PERSONALITIES.cheerful;
+  return `${p.promptDirective}
+
+LƯU Ý KỸ THUẬT QUAN TRỌNG VỀ ĐỊNH DẠNG:
+Dù bạn đang thể hiện phong cách nào (kể cả giận dữ cộc cằn, buồn bã hay tấu hài), bạn VẪN PHẢI tuân thủ 100% việc phân tích dinh dưỡng chính xác và BẮT BUỘC chèn khối JSON (\`\`\`json:meal_log hoặc \`\`\`json:activity_log) ở cuối tin nhắn theo đúng cấu trúc quy định. Tuyệt đối không được bỏ sót khối JSON!`;
 }
 
 function loadUserProfile() {
@@ -418,12 +558,13 @@ function smartAnalyzeNutrition(userText) {
       notes: `Ghi nhận hoạt động theo chia sẻ của người dùng.`
     };
 
-    let assistantText = `Tuyệt vời quá! 🏃‍♂️ Mình đã ghi nhận hoạt động thể chất của bạn:\n\n`;
+    const persona = PERSONALITIES[state.personality] || PERSONALITIES.cheerful;
+    let assistantText = persona.demoActPrefix();
     assistantText += `⚡ **Chi tiết hoạt động:**\n`;
     assistantText += `- **Hoạt động:** ${actName}\n`;
     assistantText += `- **Thời gian:** ${duration} phút\n`;
     assistantText += `- **Năng lượng đã tiêu hao:** **${calories} kcal**\n\n`;
-    assistantText += `💡 **Tác động tích cực:** Hoạt động thể chất này giúp tăng lượng tiêu hao tổng trong ngày, kích hoạt trao đổi chất và hỗ trợ rất tốt cho tim mạch. Mình đã tự động ghi nhận **+${calories} kcal** vào mục **Calo Tiêu Hao Hoạt Động** trên trang **Theo dõi sức khỏe** rồi nhé!\n\n`;
+    assistantText += `💡 **Tác động tích cực:** ${persona.demoActSuffix(calories)}\n\n`;
     assistantText += "```json:activity_log\n" + JSON.stringify(activityLog, null, 2) + "\n```";
 
     return { assistantText, mealLog: null, activityLog };
@@ -516,26 +657,60 @@ function smartAnalyzeNutrition(userText) {
   else if (isUpdate) action = "update";
   else if (isAddExtra) action = "add";
 
-  let actionTitle = `Chào bạn! Mình đã phân tích **${mealType}** của bạn:\n\n`;
+  const persona = PERSONALITIES[state.personality] || PERSONALITIES.cheerful;
+  let actionTitle = persona.demoMealPrefix(mealType);
   let actionNote = `${mealType} dinh dưỡng được phân tích và ghi nhận tự động.`;
   let caloLabel = "Tổng lượng Calo nạp vào:";
-  let statusComment = `Mình đã tự động ghi nhận số calo này vào mục **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!`;
+  let statusComment = persona.demoMealSuffix(mealType, totalCalories);
 
   if (action === "update") {
-    actionTitle = `Chào bạn! Mình đã cập nhật lại **${mealType}** của bạn:\n\n`;
+    if (state.personality === "angry") {
+      actionTitle = `Lại đòi đổi bữa à?! 😤 Được rồi, tôi cập nhật lại **${mealType}** cho cậu đây:\n\n`;
+    } else if (state.personality === "sad") {
+      actionTitle = `Hầy... bạn muốn đổi lại **${mealType}** sao... 🥺 Để mình sửa lại cho bạn nhé:\n\n`;
+    } else if (state.personality === "strict") {
+      actionTitle = `Mệnh lệnh điều chỉnh tiếp nhận! 🎯 Đang cập nhật dữ liệu **${mealType}**:\n\n`;
+    } else if (state.personality === "gentle") {
+      actionTitle = `Bạn muốn chỉnh lại **${mealType}** đúng không nè 🌸. Để mình giúp bạn nhé:\n\n`;
+    } else if (state.personality === "humorous") {
+      actionTitle = `Quay xe phút chót hả đồng chí! 🤣 Được rồi, cập nhật lại **${mealType}** ngay đây:\n\n`;
+    } else {
+      actionTitle = `Chào bạn! Mình đã cập nhật lại **${mealType}** của bạn:\n\n`;
+    }
     actionNote = `Đã cập nhật lại ${mealType} theo yêu cầu.`;
     caloLabel = "Tổng lượng Calo bữa sau khi cập nhật:";
-    statusComment = `Mình đã tự động cập nhật lại toàn bộ mục **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!`;
   } else if (action === "delete") {
-    actionTitle = `Mình đã ghi nhận yêu cầu xóa món khỏi **${mealType}** của bạn:\n\n`;
+    if (state.personality === "angry") {
+      actionTitle = `Hừ! Biết đường xóa bớt món khỏi **${mealType}** là đỡ ngứa mắt rồi đấy! 😤\n\n`;
+    } else if (state.personality === "sad") {
+      actionTitle = `Bỏ bớt món khỏi **${mealType}** rồi sao... 🥺 Dù sao thì bớt một chút gánh nặng cũng tốt...\n\n`;
+    } else if (state.personality === "strict") {
+      actionTitle = `Xác nhận loại bỏ mục tiêu khỏi **${mealType}**! 🎯 Đã cập nhật lại thông số:\n\n`;
+    } else if (state.personality === "gentle") {
+      actionTitle = `Mình đã giúp bạn bỏ món khỏi **${mealType}** rồi nè 🌸. Đừng để bị đói nhé!\n\n`;
+    } else if (state.personality === "humorous") {
+      actionTitle = `Thôi xong, 'bỏ của chạy lấy người' khỏi **${mealType}** rồi à! 🤣 Đã xóa liền tay:\n\n`;
+    } else {
+      actionTitle = `Mình đã ghi nhận yêu cầu xóa món khỏi **${mealType}** của bạn:\n\n`;
+    }
     actionNote = `Xóa món khỏi ${mealType}.`;
     caloLabel = "Lượng Calo điều chỉnh:";
-    statusComment = `Mình đã tự động xóa món này khỏi mục **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!`;
   } else if (isAddExtra) {
-    actionTitle = `Tuyệt vời! Mình đã ghi nhận bạn ăn thêm món vào **${mealType}**:\n\n`;
+    if (state.personality === "angry") {
+      actionTitle = `Lại còn ăn thêm nữa à?! 😤 Bụng không đáy đấy à? Ghi nhận thêm vào **${mealType}** đây:\n\n`;
+    } else if (state.personality === "sad") {
+      actionTitle = `Bạn ăn thêm món vào **${mealType}** sao... 🥺 Ăn cho ấm lòng nhé, mình ghi thêm vào đây:\n\n`;
+    } else if (state.personality === "strict") {
+      actionTitle = `Báo cáo bổ sung năng lượng! 🎯 Ghi nhận khẩu phần ăn thêm vào **${mealType}**:\n\n`;
+    } else if (state.personality === "gentle") {
+      actionTitle = `Tuyệt vời, bạn ăn thêm món vào **${mealType}** cho đủ chất nè 🌸:\n\n`;
+    } else if (state.personality === "humorous") {
+      actionTitle = `Nạp thêm 'nhiên liệu' cho **${mealType}** nữa à! 🤣 Đang ăn ngon thì ai nỡ cản, ghi nhận liền:\n\n`;
+    } else {
+      actionTitle = `Tuyệt vời! Mình đã ghi nhận bạn ăn thêm món vào **${mealType}**:\n\n`;
+    }
     actionNote = `Ăn thêm món vào ${mealType}.`;
     caloLabel = "Lượng Calo ăn thêm:";
-    statusComment = `Mình đã tự động thêm món mới này vào **${mealType}** trong trang **Theo dõi sức khỏe** cho bạn rồi nhé!`;
   }
 
   const mealLog = {
@@ -632,7 +807,8 @@ async function requestAiCompletion(messages) {
 
     const diaryContext = getCurrentDayDiaryContext(state.selectedDate);
     const basePrompt = (state.systemPrompt && state.systemPrompt.trim()) ? state.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
-    const effectivePrompt = basePrompt + "\n\n" + diaryContext;
+    const personaPrompt = getPersonalityPromptInstruction(state.personality);
+    const effectivePrompt = basePrompt + "\n\n" + personaPrompt + "\n\n" + diaryContext;
 
     requestBody.systemInstruction = {
       parts: [{ text: effectivePrompt }]
@@ -651,7 +827,8 @@ async function requestAiCompletion(messages) {
 
     const diaryContext = getCurrentDayDiaryContext(state.selectedDate);
     const basePrompt = (state.systemPrompt && state.systemPrompt.trim()) ? state.systemPrompt.trim() : DEFAULT_SYSTEM_PROMPT;
-    const effectivePrompt = basePrompt + "\n\n" + diaryContext;
+    const personaPrompt = getPersonalityPromptInstruction(state.personality);
+    const effectivePrompt = basePrompt + "\n\n" + personaPrompt + "\n\n" + diaryContext;
 
     requestBody = {
       model: targetModel,
@@ -966,11 +1143,13 @@ function renderChatMessages() {
     const itemEl = document.createElement("div");
     itemEl.className = `message-item ${msg.role}`;
 
+    const activePersona = PERSONALITIES[state.personality] || PERSONALITIES.cheerful;
+
     const avatarEl = document.createElement("div");
     avatarEl.className = "message-avatar";
     avatarEl.innerHTML = msg.role === "user"
       ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
-      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v8"></path><path d="m4.93 10.93 1.41 1.41"></path><path d="M2 18h2"></path><path d="M20 18h2"></path><path d="m19.07 10.93-1.41 1.41"></path><path d="M22 22H2"></path><path d="m16 6-4 4-4-4"></path><path d="M16 18a4 4 0 0 0-8 0"></path></svg>`;
+      : `<span style="font-size:1.15rem; line-height:1;" title="${escapeHtml(activePersona.name)}">${activePersona.emoji}</span>`;
 
     const bubbleEl = document.createElement("div");
     bubbleEl.className = "message-bubble";
@@ -1006,7 +1185,7 @@ function renderChatMessages() {
 
     const metaEl = document.createElement("div");
     metaEl.className = "message-meta";
-    metaEl.textContent = `${msg.role === "user" ? "Bạn" : "NutriAI"} • ${msg.timestamp}`;
+    metaEl.textContent = `${msg.role === "user" ? "Bạn" : ("NutriAI " + activePersona.emoji)} • ${msg.timestamp}`;
 
     bubbleEl.appendChild(contentEl);
     bubbleEl.appendChild(metaEl);
@@ -1237,6 +1416,133 @@ async function handleSendMessage(text) {
     saveChatMessages();
     renderChatMessages();
   }
+}
+
+// =============================================================================
+// AI PERSONALITY UI RENDERING & CONTROLLER
+// =============================================================================
+function renderPersonalityUI() {
+  const currentKey = state.personality || "cheerful";
+  const currentPersona = PERSONALITIES[currentKey] || PERSONALITIES.cheerful;
+
+  // 1. Update Header Trigger Button Icon & Name
+  const headerIcon = document.getElementById("chat-header-persona-icon");
+  const headerName = document.getElementById("chat-header-persona-name");
+  if (headerIcon) headerIcon.textContent = currentPersona.emoji;
+  if (headerName) headerName.textContent = currentPersona.name;
+
+  // 2. Render Header Dropdown Menu Items
+  const menuContainer = document.getElementById("personality-menu-items");
+  if (menuContainer) {
+    menuContainer.innerHTML = "";
+    Object.keys(PERSONALITIES).forEach(key => {
+      const p = PERSONALITIES[key];
+      const isActive = key === currentKey;
+      const itemBtn = document.createElement("button");
+      itemBtn.type = "button";
+      itemBtn.className = `personality-menu-item ${isActive ? "active" : ""}`;
+      itemBtn.innerHTML = `
+        <span class="personality-item-emoji">${p.emoji}</span>
+        <div class="personality-item-info">
+          <div class="personality-item-name">${escapeHtml(p.name)}</div>
+          <div class="personality-item-desc">${escapeHtml(p.desc)}</div>
+        </div>
+        <span class="personality-item-check">✓</span>
+      `;
+      itemBtn.addEventListener("click", () => {
+        savePersonality(key);
+        closePersonalityDropdown();
+      });
+      menuContainer.appendChild(itemBtn);
+    });
+  }
+
+  // 3. Render Settings Tab Personality Grid
+  const settingsGrid = document.getElementById("personality-settings-grid");
+  if (settingsGrid) {
+    settingsGrid.innerHTML = "";
+    Object.keys(PERSONALITIES).forEach(key => {
+      const p = PERSONALITIES[key];
+      const isActive = key === currentKey;
+      const card = document.createElement("div");
+      card.className = `personality-card ${isActive ? "active" : ""}`;
+      card.innerHTML = `
+        <div>
+          <div class="personality-card-header">
+            <div class="personality-card-title-group">
+              <span class="personality-card-emoji">${p.emoji}</span>
+              <div class="personality-card-titles">
+                <div class="personality-card-name">${escapeHtml(p.name)}</div>
+                <span class="personality-card-tag">${escapeHtml(p.tag)}</span>
+              </div>
+            </div>
+            <div class="personality-card-radio"></div>
+          </div>
+          <div class="personality-card-desc">${escapeHtml(p.desc)}</div>
+          <div class="personality-card-quote-box">
+            <span class="personality-card-quote-label">Câu thoại mẫu:</span>
+            <span>"${escapeHtml(p.sampleQuote)}"</span>
+          </div>
+        </div>
+        <div class="personality-card-footer">
+          <span>${isActive ? "✓ Đang kích hoạt" : "Nhấp để chọn tính cách này"}</span>
+          <span>${isActive ? "● Hoạt động" : "○ Chọn"}</span>
+        </div>
+      `;
+      card.addEventListener("click", () => {
+        savePersonality(key);
+      });
+      settingsGrid.appendChild(card);
+    });
+  }
+
+  // 4. Update Assistant name in active chat messages if needed
+  if (typeof renderChatMessages === "function") {
+    const metaElements = document.querySelectorAll(".message-item.assistant .message-meta");
+    metaElements.forEach(meta => {
+      if (meta.textContent.includes("NutriAI")) {
+        const parts = meta.textContent.split("•");
+        if (parts.length > 1) {
+          meta.textContent = `NutriAI ${currentPersona.emoji} •${parts[1]}`;
+        }
+      }
+    });
+  }
+}
+
+function closePersonalityDropdown() {
+  const wrapper = document.getElementById("personality-dropdown-wrapper");
+  const menu = document.getElementById("personality-dropdown-menu");
+  if (wrapper) wrapper.classList.remove("open");
+  if (menu) menu.classList.add("hidden");
+}
+
+function initPersonalityUI() {
+  const triggerBtn = document.getElementById("btn-personality-trigger");
+  const wrapper = document.getElementById("personality-dropdown-wrapper");
+  const menu = document.getElementById("personality-dropdown-menu");
+
+  if (triggerBtn && wrapper && menu) {
+    triggerBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = wrapper.classList.contains("open");
+      if (isOpen) {
+        wrapper.classList.remove("open");
+        menu.classList.add("hidden");
+      } else {
+        wrapper.classList.add("open");
+        menu.classList.remove("hidden");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!wrapper.contains(e.target)) {
+        closePersonalityDropdown();
+      }
+    });
+  }
+
+  renderPersonalityUI();
 }
 
 function updateSendButtonState() {
@@ -1825,6 +2131,7 @@ function switchTab(targetTabId) {
     scrollChatToBottom();
   } else if (targetTabId === "tab-api") {
     syncApiSettingsUI();
+    renderPersonalityUI();
   }
 }
 
@@ -2625,5 +2932,6 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
   syncApiSettingsUI();
   renderChatMessages();
   renderHealthTracker();
+  initPersonalityUI();
 });
 }
