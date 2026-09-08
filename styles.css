@@ -1601,7 +1601,20 @@ body {
     padding: 1rem;
   }
   .activity-add-row {
-    grid-template-columns: 1fr 1fr;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .activity-add-row .form-group {
+    width: 100%;
+  }
+
+  .activity-add-row .form-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   .activity-add-row .btn-add-item {
     grid-column: span 2;
