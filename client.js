@@ -53,8 +53,8 @@ Nhiệm vụ chính của bạn:
      + "add": Người dùng ăn bữa mới HOẶC ăn thêm món vào bữa đã có (ví dụ: "bữa tối mình ăn thêm 1 quả táo"). Khi action là "add", danh sách items CHỈ chứa các món mới ăn thêm (hoặc món mới chưa có).
      + "update": Người dùng muốn cập nhật/thay thế/sửa lại bữa ăn (ví dụ: "sửa bữa tối thành...", "bữa tối đổi lại là...", hoặc khi bạn tổng hợp lại toàn bộ bữa ăn gồm cả món cũ và món mới). Khi action là "update", danh sách items chứa toàn bộ các món của bữa ăn sau khi cập nhật.
      + "delete": Người dùng muốn xóa món ăn khỏi bữa (ví dụ: "bỏ món trứng ở bữa tối", "xóa bữa tối").
-   - Phân tích chi tiết từng món: ước lượng khẩu phần, tính số calo (kcal) và chất dinh dưỡng (Protein, Carbs, Fat).
-   - Tính tổng calo nạp vào và đưa ra nhận xét khoa học ngắn gọn.
+   - Phân tích chi tiết từng món: ước lượng khẩu phần, tính chính xác số calo (kcal) và 3 chất dinh dưỡng đa lượng thiết yếu: Protein (g), Carbs (g), Fat (g).
+   - Tính tổng calo và tổng macro nạp vào, đưa ra nhận xét khoa học ngắn gọn về chất lượng bữa ăn.
    - BẮT BUỘC chèn khối JSON ở cuối tin nhắn:
 \`\`\`json:meal_log
 {
@@ -86,8 +86,18 @@ Nhiệm vụ chính của bạn:
 }
 \`\`\`
 
-3. Với các câu hỏi tư vấn thông thường, trả lời nhiệt tình, dễ hiểu và không cần kèm khối JSON.
-4. Luôn sử dụng tiếng Việt thân thiện, rõ ràng, định dạng sinh động.`;
+3. KHI NGƯỜI DÙNG HỎI KIỂM TRA ĐỦ CHẤT HAY THỪA / THIẾU CHẤT GÌ TRONG NGÀY (ví dụ: "hôm nay tôi đã đủ chất chưa?", "hôm nay có thừa hay thiếu chất gì không?", "kiểm tra dinh dưỡng hôm nay", "hôm nay ăn vậy đã đủ chất chưa"):
+   - Hãy xem kỹ phần [DỮ LIỆU NHẬT KÝ SỨC KHỎE NGÀY ĐANG CHỌN] và [TỔNG HỢP DINH DƯỠNG & ĐÁNH GIÁ ĐỦ/THỪA CHẤT TRONG NGÀY] được cung cấp trong ngữ cảnh hệ thống.
+   - Phân tích chi tiết cả 4 chỉ số: Tổng Calo, Protein (chất đạm), Carbs (tinh bột), Fat (chất béo) so với nhu cầu khuyến nghị theo thể trạng người dùng.
+   - Trả lời rõ ràng, khoa học và mạch lạc:
+     + Đánh giá tổng quan: Ngày hôm nay đã ĐỦ CHẤT chưa?
+     + Đánh giá từng chất: Chất nào đã ĐỦ, chất nào đang THIẾU (thiếu bao nhiêu gam/calo), chất nào đang THỪA (thừa bao nhiêu gam/calo).
+     + Nêu rõ nguyên nhân: Nhóm món ăn nào đã đóng góp lượng chất đó.
+     + Lời khuyên thiết thực: Nếu thiếu Protein thì bữa tiếp theo nên ăn thêm gì (ức gà, trứng, đậu hũ, tôm, cá...); nếu thừa Carb/Fat thì nên cắt giảm món nào hoặc cần vận động thêm bao nhiêu phút để cân bằng lại.
+   - Trường hợp này KHÔNG cần xuất khối JSON nếu người dùng không kể thêm món ăn mới.
+
+4. Với các câu hỏi tư vấn thông thường, trả lời nhiệt tình, dễ hiểu và không cần kèm khối JSON.
+5. Luôn sử dụng tiếng Việt thân thiện, rõ ràng, định dạng sinh động.`;
 
 const PROVIDER_PRESETS = {
   gemini: {
@@ -106,7 +116,15 @@ const PROVIDER_PRESETS = {
     name: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",
     model: "meta-llama/llama-3.3-70b-instruct:free",
-    models: ["meta-llama/llama-3.3-70b-instruct:free", "google/gemini-2.0-flash-exp:free", "deepseek/deepseek-chat"]
+    models: [
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "google/gemini-2.0-flash-exp:free",
+      "deepseek/deepseek-chat",
+      "deepseek/deepseek-r1:free",
+      "qwen/qwen-2.5-72b-instruct",
+      "mistralai/mistral-7b-instruct:free",
+      "openai/gpt-4o-mini"
+    ]
   },
   groq: {
     name: "Groq",
@@ -271,10 +289,33 @@ function shiftDateString(dateStr, offsetDays) {
   return `${year}-${month}-${day}`;
 }
 
+function detectProviderFromKey(key) {
+  const clean = (key || "").trim();
+  if (clean.startsWith("sk-or-")) return "openrouter";
+  if (clean.startsWith("AIzaSy") || clean.startsWith("AIza")) return "gemini";
+  if (clean.startsWith("gsk_")) return "groq";
+  if (clean.startsWith("sk-") && !clean.startsWith("sk-or-")) return "openai";
+  return null;
+}
+
 function loadApiConfig() {
   const saved = safeStorage.getItem(STORAGE_KEYS.API_CONFIG);
   if (saved) {
-    try { return JSON.parse(saved); } catch (e) {}
+    try {
+      const parsed = JSON.parse(saved);
+      // Auto-heal: nếu người dùng đã nhập key OpenRouter (sk-or-...) nhưng provider vẫn bị kẹt là gemini
+      if (parsed.apiKey && parsed.apiKey.startsWith("sk-or-") && parsed.provider === "gemini") {
+        parsed.provider = "openrouter";
+        if (!parsed.baseUrl || parsed.baseUrl.includes("generativelanguage.googleapis.com")) {
+          parsed.baseUrl = PROVIDER_PRESETS.openrouter.baseUrl;
+        }
+        if (!parsed.model || parsed.model === "gemini-flash-latest") {
+          parsed.model = PROVIDER_PRESETS.openrouter.model;
+        }
+        safeStorage.setItem(STORAGE_KEYS.API_CONFIG, JSON.stringify(parsed));
+      }
+      return parsed;
+    } catch (e) {}
   }
   return {
     provider: "gemini",
@@ -332,7 +373,9 @@ function getPersonalityPromptInstruction(personalityKey) {
   return `${p.promptDirective}
 
 LƯU Ý KỸ THUẬT QUAN TRỌNG VỀ ĐỊNH DẠNG:
-Dù bạn đang thể hiện phong cách nào (kể cả giận dữ cộc cằn, buồn bã hay tấu hài), bạn VẪN PHẢI tuân thủ 100% việc phân tích dinh dưỡng chính xác và BẮT BUỘC chèn khối JSON (\`\`\`json:meal_log hoặc \`\`\`json:activity_log) ở cuối tin nhắn theo đúng cấu trúc quy định. Tuyệt đối không được bỏ sót khối JSON!`;
+Dù bạn đang thể hiện phong cách nào (kể cả giận dữ cộc cằn, buồn bã hay tấu hài), bạn VẪN PHẢI tuân thủ 100% việc phân tích dinh dưỡng chính xác:
+1. Luôn tính toán đủ Protein, Carbs, Fat cho từng món và tổng bữa ăn, và BẮT BUỘC chèn khối JSON (\`\`\`json:meal_log hoặc \`\`\`json:activity_log) ở cuối tin nhắn khi người dùng báo cáo bữa ăn hoặc vận động. Tuyệt đối không được bỏ sót khối JSON!
+2. Khi người dùng hỏi kiểm tra xem hôm nay đã đủ chất hay thừa chất/thiếu chất gì chưa: Hãy dựa vào số liệu dinh dưỡng thực tế và mục tiêu khuyến nghị được cung cấp trong ngữ cảnh để phân tích rành mạch từng chất (Protein, Carbs, Fat, Calo), đưa ra nhận xét đánh giá (Đủ/Thừa/Thiếu) và lời khuyên thiết thực theo đúng phong cách tính cách của bạn (không cần xuất khối JSON trong trường hợp này).`;
 }
 
 function loadUserProfile() {
@@ -387,8 +430,10 @@ function getDailyLog(dateStr) {
 function getCurrentDayDiaryContext(dateStr) {
   const targetDate = dateStr || state.selectedDate || getTodayDateString();
   const dayLog = state.dailyLogs[targetDate];
+  const profile = state.profile || { weight: 65, height: 170, age: 25, gender: "male", activityLevel: 1.375, goal: "mild_loss" };
+
   if (!dayLog) {
-    return `[NGỮ CẢNH NHẬT KÝ NGÀY (${targetDate}): Chưa có món ăn hay bài tập nào được ghi nhận]`;
+    return `[NGỮ CẢNH NHẬT KÝ NGÀY (${targetDate}): Chưa có món ăn hay bài tập nào được ghi nhận. Thể trạng người dùng: Nặng ${profile.weight}kg, Cao ${profile.height}cm, Tuổi ${profile.age}, Mục tiêu: ${profile.goal}]`;
   }
 
   const mealDefs = [
@@ -402,9 +447,12 @@ function getCurrentDayDiaryContext(dateStr) {
   mealDefs.forEach(def => {
     const list = dayLog.meals?.[def.key] || [];
     if (list.length > 0) {
-      const itemsText = list.map(i => `${i.name} (${i.calories} kcal)`).join(", ");
-      const totalCal = list.reduce((s, i) => s + (i.calories || 0), 0);
-      mealParts.push(`- ${def.name} (${totalCal} kcal): ${itemsText}`);
+      const itemsText = list.map(i => `${i.name} (${i.calories} kcal | ${i.protein || 0}g P, ${i.carbs || 0}g C, ${i.fat || 0}g F)`).join(", ");
+      const totalCal = list.reduce((s, i) => s + (Number(i.calories) || 0), 0);
+      const totalP = Math.round(list.reduce((s, i) => s + (Number(i.protein) || 0), 0) * 10) / 10;
+      const totalC = Math.round(list.reduce((s, i) => s + (Number(i.carbs) || 0), 0) * 10) / 10;
+      const totalF = Math.round(list.reduce((s, i) => s + (Number(i.fat) || 0), 0) * 10) / 10;
+      mealParts.push(`- ${def.name} (${totalCal} kcal | P: ${totalP}g, C: ${totalC}g, F: ${totalF}g): ${itemsText}`);
     } else {
       mealParts.push(`- ${def.name}: (Trống)`);
     }
@@ -417,13 +465,27 @@ function getCurrentDayDiaryContext(dateStr) {
     actText = actList.map(a => `${a.name} (${a.duration}p, -${a.calories} kcal)`).join(", ") + ` [Tổng tiêu hao: -${totalActCal} kcal]`;
   }
 
+  // Calculate daily macro evaluation
+  const evaluation = checkDailyNutrientStatus(dayLog, profile);
+  const { current, targets, pStatus, cStatus, fStatus, targetCals } = evaluation;
+
   return `[DỮ LIỆU NHẬT KÝ SỨC KHỎE NGÀY ĐANG CHỌN (${targetDate}):
 ${mealParts.join("\n")}
 - Hoạt động thể chất: ${actText}
+
+[TỔNG HỢP DINH DƯỠNG & ĐÁNH GIÁ ĐỦ / THỪA CHẤT HÔM NAY]:
+- Calo nạp vào: ${current.calories} kcal / Mục tiêu khuyến nghị: ${targetCals} kcal (${Math.round((current.calories / targetCals) * 100)}%)
+- Protein (Đạm): Đã nạp ${current.protein}g / Mục tiêu: ${targets.protein}g (${pStatus.pct}%) ➔ [Trạng thái: ${pStatus.label}]
+- Carbs (Tinh bột): Đã nạp ${current.carbs}g / Mục tiêu: ${targets.carbs}g (${cStatus.pct}%) ➔ [Trạng thái: ${cStatus.label}]
+- Fat (Chất béo): Đã nạp ${current.fat}g / Mục tiêu: ${targets.fat}g (${fStatus.pct}%) ➔ [Trạng thái: ${fStatus.label}]
+- Đánh giá tổng quan: ${evaluation.title}
+- Gợi ý hành động: ${evaluation.advice}
+
 QUY TẮC QUAN TRỌNG:
 1. Khi người dùng nói "ăn thêm ... vào [bữa]", hãy trả về "action": "add" với CHỈ (những) món ăn thêm mới (không lặp lại các món cũ đã có trong nhật ký). Hoặc nếu bạn tổng hợp lại toàn bộ bữa ăn đầy đủ, hãy đặt "action": "update".
 2. Khi người dùng nói "sửa [bữa] thành..." hoặc "đổi [bữa] thành...", hãy trả về "action": "update" kèm danh sách đầy đủ tất cả các món mới của bữa đó.
-3. Khi người dùng nói "xóa [món] ở [bữa]" hoặc "bỏ [món]", hãy trả về "action": "delete" kèm món cần xóa (hoặc danh sách sau khi xóa với "action": "update").]`;
+3. Khi người dùng nói "xóa [món] ở [bữa]" hoặc "bỏ [món]", hãy trả về "action": "delete" kèm món cần xóa (hoặc danh sách sau khi xóa với "action": "update").
+4. Khi người dùng hỏi kiểm tra xem "hôm nay đã đủ chất chưa", "hôm nay có thừa hay thiếu chất gì không", "kiểm tra dinh dưỡng hôm nay": Hãy đối chiếu trực tiếp dữ liệu dinh dưỡng ở trên để phân tích rành mạch từng chất (Đủ/Thiếu/Thừa) và đưa ra lời khuyên thiết thực (không kèm khối JSON).]`;
 }
 
 function loadChatMessages() {
@@ -494,6 +556,165 @@ function calculateTargetCalories(tdee, goal) {
   }
 }
 
+function calculateTargetMacros(targetCalories, profile) {
+  const weight = parseFloat(profile?.weight) || 65;
+  const goal = profile?.goal || "mild_loss";
+
+  // Protein (g): 1.6 - 2.0g per kg based on goal
+  let proteinPerKg = 1.6;
+  if (goal === "mild_loss" || goal === "standard_loss") {
+    proteinPerKg = 1.8;
+  } else if (goal === "gain") {
+    proteinPerKg = 2.0;
+  }
+  const targetProtein = Math.max(50, Math.round(weight * proteinPerKg));
+
+  // Fat (g): ~25% of targetCalories (1g fat = 9 kcal)
+  const targetFat = Math.max(30, Math.round((targetCalories * 0.25) / 9));
+
+  // Carbs (g): remaining calories (1g carb = 4 kcal)
+  const caloriesLeft = targetCalories - (targetProtein * 4 + targetFat * 9);
+  const targetCarbs = Math.max(50, Math.round(caloriesLeft / 4));
+
+  return {
+    protein: targetProtein,
+    carbs: targetCarbs,
+    fat: targetFat
+  };
+}
+
+function calculateDailyMacros(dayLog) {
+  let calories = 0;
+  let protein = 0;
+  let carbs = 0;
+  let fat = 0;
+
+  if (!dayLog || !dayLog.meals) return { calories, protein, carbs, fat };
+
+  const mealKeys = ["breakfast", "lunch", "dinner", "snack"];
+  mealKeys.forEach(key => {
+    const list = dayLog.meals[key] || [];
+    list.forEach(item => {
+      calories += Number(item.calories) || 0;
+      protein += Number(item.protein) || 0;
+      carbs += Number(item.carbs) || 0;
+      fat += Number(item.fat) || 0;
+    });
+  });
+
+  return {
+    calories: Math.round(calories),
+    protein: Math.round(protein * 10) / 10,
+    carbs: Math.round(carbs * 10) / 10,
+    fat: Math.round(fat * 10) / 10
+  };
+}
+
+function checkDailyNutrientStatus(dayLog, profile) {
+  const p = profile || { weight: 65, height: 170, age: 25, gender: "male", activityLevel: 1.375, goal: "mild_loss" };
+  const bmr = calculateBMR(p.weight, p.height, p.age, p.gender);
+  const tdee = calculateTDEE(bmr, p.activityLevel);
+  const targetCals = calculateTargetCalories(tdee, p.goal);
+  const targets = calculateTargetMacros(targetCals, p);
+  const current = calculateDailyMacros(dayLog);
+
+  if (current.calories === 0) {
+    return {
+      status: "neutral",
+      icon: "🥗",
+      title: "Chưa có dữ liệu bữa ăn hôm nay",
+      desc: "Bạn chưa ghi nhận bữa ăn nào trong ngày này. Hãy kể cho Trợ lý AI nghe hoặc bấm \"+ Thêm món\" để tự động kiểm tra đủ chất hay thừa chất!",
+      advice: "",
+      pStatus: { label: "Chưa nạp", type: "empty", pct: 0 },
+      cStatus: { label: "Chưa nạp", type: "empty", pct: 0 },
+      fStatus: { label: "Chưa nạp", type: "empty", pct: 0 },
+      current,
+      targets,
+      targetCals
+    };
+  }
+
+  const pPct = Math.round((current.protein / targets.protein) * 100);
+  const cPct = Math.round((current.carbs / targets.carbs) * 100);
+  const fPct = Math.round((current.fat / targets.fat) * 100);
+  const calPct = Math.round((current.calories / targetCals) * 100);
+
+  // Evaluate Protein
+  let pStatus = { label: "Đủ đạm", type: "ok", pct: pPct };
+  if (pPct < 70) pStatus = { label: "Thiếu đạm", type: "low", pct: pPct };
+  else if (pPct > 125) pStatus = { label: "Dư đạm", type: "high", pct: pPct };
+
+  // Evaluate Carbs
+  let cStatus = { label: "Đủ carb", type: "ok", pct: cPct };
+  if (cPct < 70) cStatus = { label: "Thiếu carb", type: "low", pct: cPct };
+  else if (cPct > 125) cStatus = { label: "Thừa carb", type: "high", pct: cPct };
+
+  // Evaluate Fat
+  let fStatus = { label: "Đủ fat", type: "ok", pct: fPct };
+  if (fPct < 70) fStatus = { label: "Thiếu fat", type: "low", pct: fPct };
+  else if (fPct > 125) fStatus = { label: "Thừa fat", type: "high", pct: fPct };
+
+  const deficiencies = [];
+  const excesses = [];
+
+  if (pPct < 70) deficiencies.push(`Protein (${current.protein}/${targets.protein}g)`);
+  else if (pPct > 125) excesses.push(`Protein (${current.protein}/${targets.protein}g)`);
+
+  if (cPct < 70) deficiencies.push(`Carbs (${current.carbs}/${targets.carbs}g)`);
+  else if (cPct > 125) excesses.push(`Carbs (${current.carbs}/${targets.carbs}g)`);
+
+  if (fPct < 70) deficiencies.push(`Fat (${current.fat}/${targets.fat}g)`);
+  else if (fPct > 125) excesses.push(`Fat (${current.fat}/${targets.fat}g)`);
+
+  let status = "ok";
+  let icon = "✅";
+  let title = "Dinh dưỡng hôm nay rất cân đối & đủ chất!";
+  let desc = `Bạn đã nạp ${current.calories} kcal (~${calPct}% mục tiêu) với tỷ lệ Protein (${current.protein}g), Carbs (${current.carbs}g), Fat (${current.fat}g) rất hài hòa.`;
+  let advice = "Tiếp tục giữ vững phong độ ăn uống chuẩn khoa học này nhé!";
+
+  if (excesses.length > 0 && deficiencies.length > 0) {
+    status = "warning";
+    icon = "⚠️";
+    title = `Chưa cân đối: Thừa ${excesses.join(", ")} nhưng Thiếu ${deficiencies.join(", ")}`;
+    desc = `Chế độ ăn hôm nay đang bị lệch chất: Bạn nạp quá mức ${excesses.join(", ")} nhưng lại chưa đáp ứng đủ ${deficiencies.join(", ")}.`;
+    advice = `💡 Lời khuyên: Bữa tới hãy ưu tiên các món bổ sung ${deficiencies.map(d => d.split(" ")[0]).join(", ")} (ức gà, trứng, đậu, cá) và cắt giảm ${excesses.map(e => e.split(" ")[0]).join(", ")}.`;
+  } else if (excesses.length > 0) {
+    status = "alert";
+    icon = "🚨";
+    title = `Cảnh báo thừa chất: Đang dư thừa ${excesses.join(", ")}`;
+    desc = `Lượng ${excesses.join(", ")} đã vượt quá ngưỡng khuyến nghị hàng ngày của bạn${calPct > 105 ? " và tổng calo đang bị thặng dư" : ""}.`;
+    advice = `💡 Lời khuyên: Hãy hạn chế thức ăn nhiều dầu mỡ, đồ ngọt; nếu có thể hãy đi bộ hoặc tập nhẹ 20-30 phút để cân bằng năng lượng.`;
+  } else if (deficiencies.length > 0) {
+    if (calPct < 70) {
+      status = "neutral";
+      icon = "⏳";
+      title = `Đang còn thiếu chất: Cần nạp thêm ${deficiencies.join(", ")}`;
+      desc = `Hiện tại bạn mới nạp ${current.calories}/${targetCals} kcal (${calPct}%). Cơ thể vẫn đang cần thêm ${deficiencies.join(", ")} để đủ năng lượng phục hồi.`;
+      advice = `💡 Lời khuyên: Hãy ăn thêm bữa phụ hoặc bữa chính kế tiếp đầy đủ đạm và dinh dưỡng để cơ thể khỏe mạnh!`;
+    } else {
+      status = "warning";
+      icon = "⚠️";
+      title = `Thiếu cân đối: Đủ calo nhưng hụt ${deficiencies.join(", ")}`;
+      desc = `Tổng calo đã đạt (${calPct}%) nhưng lượng ${deficiencies.join(", ")} lại bị thiếu hụt so với chuẩn.`;
+      advice = `💡 Lời khuyên: Thay thế bớt calo rỗng bằng các thực phẩm giàu vi dưỡng chất và đạm chất lượng cao.`;
+    }
+  }
+
+  return {
+    status,
+    icon,
+    title,
+    desc,
+    advice,
+    pStatus,
+    cStatus,
+    fStatus,
+    current,
+    targets,
+    targetCals
+  };
+}
+
 // =============================================================================
 // 4. SMART ANALYZER (Handles Meals & Physical Activities)
 // =============================================================================
@@ -521,6 +742,71 @@ const FOOD_DATABASE = [
 
 function smartAnalyzeNutrition(userText) {
   const lower = userText.toLowerCase();
+
+  // CHECK IF USER IS ASKING TO CHECK NUTRIENT ADEQUACY / EXCESS / DEFICIENCY
+  const isNutrientCheck = lower.includes("đủ chất") || lower.includes("chủ chất") ||
+                          lower.includes("thừa chất") || lower.includes("từa chất") ||
+                          lower.includes("thiếu chất") || lower.includes("kiểm tra dinh dưỡng") ||
+                          lower.includes("kiểm tra xem") || (lower.includes("dinh dưỡng") && lower.includes("hôm nay")) ||
+                          (lower.includes("đủ") && lower.includes("chất"));
+
+  if (isNutrientCheck) {
+    const dayLog = getDailyLog(state.selectedDate);
+    const evaluation = checkDailyNutrientStatus(dayLog, state.profile);
+    const { current, targets, pStatus, cStatus, fStatus, targetCals } = evaluation;
+
+    const persona = PERSONALITIES[state.personality] || PERSONALITIES.cheerful;
+    let text = "";
+
+    if (current.calories === 0) {
+      if (state.personality === "angry") {
+        text = `Cậu chưa nạp được món nào vào bụng hôm nay thì tôi lấy đâu ra số liệu mà kiểm tra đủ chất với thừa chất hả?! 😤 Hãy ghi nhận bữa ăn đi rồi tính tiếp!`;
+      } else if (state.personality === "sad") {
+        text = `Hôm nay bạn chưa ăn gì sao... 🥺 Đừng để bụng đói nhé! Hãy kể cho mình nghe bạn đã ăn gì để mình kiểm tra xem bạn có bị thiếu chất không nhé.`;
+      } else if (state.personality === "strict") {
+        text = `Chưa có dữ liệu bữa ăn nào được ghi nhận cho ngày hôm nay! 🎯 Hãy báo cáo bữa ăn ngay để hệ thống bắt đầu đo lường chỉ số Protein, Carbs, Fat.`;
+      } else {
+        text = `Chào bạn! Hôm nay bạn chưa ghi nhận bữa ăn nào trong nhật ký. Bạn hãy kể cho mình nghe bạn đã ăn gì (ví dụ: *"bữa sáng tôi ăn 2 quả trứng 1 cái ngô"*) để mình phân tích Protein, Carbs, Fat và kiểm tra xem bạn đã đủ chất chưa nhé! 🥗`;
+      }
+      return { assistantText: text, mealLog: null, activityLog: null };
+    }
+
+    if (state.personality === "angry") {
+      text = `Hừ! Để tôi soi xem hôm nay cậu ăn uống ra làm sao mà đòi kiểm tra đủ chất! 🧐\n\n`;
+    } else if (state.personality === "sad") {
+      text = `Để mình cùng xem lại hôm nay bạn đã ăn uống như thế nào nhé... 🥺 Hy vọng cơ thể bạn được nuôi dưỡng thật tốt:\n\n`;
+    } else if (state.personality === "strict") {
+      text = `Báo cáo kiểm toán dinh dưỡng ngày **${state.selectedDate}**! 🎯 Dữ liệu đo lường cụ thể:\n\n`;
+    } else if (state.personality === "gentle") {
+      text = `Mình đã xem kỹ nhật ký ăn uống hôm nay của bạn rồi nè 🌸. Cùng mình kiểm tra độ cân bằng dưỡng chất nhé:\n\n`;
+    } else if (state.personality === "humorous") {
+      text = `Đến giờ 'bắt bệnh' dinh dưỡng rồi đây! 🕵️‍♂️ Xem hôm nay chiếc bụng của bạn nạp những gì nào:\n\n`;
+    } else {
+      text = `Chào bạn! 🎉 Mình đã phân tích toàn diện các chất dinh dưỡng hôm nay của bạn rồi nè:\n\n`;
+    }
+
+    text += `📊 **Bảng Tổng Hợp Dinh Dưỡng Đa Lượng (Macro):**\n`;
+    text += `- 🔥 **Tổng Calo nạp:** **${current.calories} kcal** / Mục tiêu **${targetCals} kcal** (${Math.round((current.calories / targetCals) * 100)}%)\n`;
+    text += `- 🥩 **Protein (Đạm):** **${current.protein}g** / Mục tiêu **${targets.protein}g** (${pStatus.pct}%) ➔ **${pStatus.label}**\n`;
+    text += `- 🍚 **Carbohydrate (Tinh bột):** **${current.carbs}g** / Mục tiêu **${targets.carbs}g** (${cStatus.pct}%) ➔ **${cStatus.label}**\n`;
+    text += `- 🥑 **Fat (Chất béo):** **${current.fat}g** / Mục tiêu **${targets.fat}g** (${fStatus.pct}%) ➔ **${fStatus.label}**\n\n`;
+
+    text += `🔍 **Đánh Giá Chi Tiết:**\n`;
+    text += `**${evaluation.icon} ${evaluation.title}**\n${evaluation.desc}\n\n`;
+    if (evaluation.advice) {
+      text += `${evaluation.advice}\n\n`;
+    }
+
+    if (state.personality === "angry") {
+      text += `Nhớ đấy, ăn uống cho nghiêm túc vào, đừng để tôi phải nhắc nhở nhiều lần! 😤`;
+    } else if (state.personality === "cheerful") {
+      text += `Cố lên bạn nhé, chúng mình cùng nhau ăn ngon - đủ chất - dáng đẹp mỗi ngày! 💪✨🥗`;
+    } else if (state.personality === "gentle") {
+      text += `Chúc bạn luôn ăn ngon miệng và cơ thể luôn tràn đầy năng lượng tươi mới nhé 🌸`;
+    }
+
+    return { assistantText: text, mealLog: null, activityLog: null };
+  }
 
   // CHECK IF USER IS REPORTING PHYSICAL ACTIVITY / CALORIES BURNED
   const isActivity = lower.includes("đi bộ") || lower.includes("chạy bộ") || lower.includes("đạp xe") ||
@@ -751,12 +1037,12 @@ async function requestAiCompletion(messages) {
 
   const cleanKey = apiKey.trim();
   const cleanBase = (baseUrl || "").replace(/\/+$/, "");
-  const targetModel = model || "gemini-flash-latest";
+  const targetModel = model || (PROVIDER_PRESETS[provider]?.model || "gemini-flash-latest");
 
+  // Chỉ dùng API Google Gemini Native nếu provider là gemini hoặc base URL là của Google (không áp dụng cho OpenRouter/OpenAI/Groq)
   const isGemini = provider === "gemini" ||
-                   cleanBase.includes("generativelanguage.googleapis.com") ||
-                   cleanBase.includes(":generateContent") ||
-                   targetModel.toLowerCase().startsWith("gemini");
+                   (provider !== "openrouter" && provider !== "openai" && provider !== "groq" &&
+                    (cleanBase.includes("generativelanguage.googleapis.com") || cleanBase.includes(":generateContent")));
 
   let endpoint = "";
   let headers = {};
@@ -821,7 +1107,7 @@ async function requestAiCompletion(messages) {
     };
 
     if (provider === "openrouter") {
-      headers["HTTP-Referer"] = window.location.href;
+      headers["HTTP-Referer"] = window.location.origin || "http://localhost:3000";
       headers["X-Title"] = "NutriAI Health Assistant";
     }
 
@@ -840,9 +1126,9 @@ async function requestAiCompletion(messages) {
     };
   }
 
-  // 18-second timeout controller
+  // 30-second timeout controller
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 18000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   let responseData = null;
   try {
@@ -872,7 +1158,7 @@ async function requestAiCompletion(messages) {
     clearTimeout(timeoutId);
 
     if (err.name === "AbortError") {
-      throw new Error("Hết thời gian chờ phản hồi (Timeout quá 18s). Vui lòng thử lại hoặc dùng Chế Độ Demo.");
+      throw new Error("Hết thời gian chờ phản hồi (Timeout quá 30s). Vui lòng thử lại hoặc dùng Chế Độ Demo.");
     }
 
     // Attempt local Node proxy fallback on browser CORS failure
@@ -917,7 +1203,15 @@ async function requestAiCompletion(messages) {
     }
     return text;
   } else {
-    return responseData.choices?.[0]?.message?.content || "Không nhận được phản hồi từ mô hình AI.";
+    if (responseData.error) {
+      const errMsg = typeof responseData.error === "object" ? (responseData.error.message || JSON.stringify(responseData.error)) : responseData.error;
+      throw new Error(errMsg);
+    }
+    const content = responseData.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error("Không nhận được nội dung phản hồi từ mô hình AI.");
+    }
+    return content;
   }
 }
 
@@ -1391,7 +1685,8 @@ async function handleSendMessage(text) {
   } catch (err) {
     console.error("Lỗi AI Chat:", err);
     const errIdx = state.chatMessages.findIndex(m => m.id === tempAssistantId);
-    const errorText = `⚠️ **Không thể kết nối đến máy chủ AI:**\n${err.message}\n\n*Gợi ý:* Bạn có thể vào tab **"Thêm & Cài Đặt API"** để kiểm tra lại API Key Google Gemini hoặc chuyển sang **"Chế Độ Demo"** để ứng dụng hoạt động ngay lập tức!`;
+    const provPreset = PROVIDER_PRESETS[state.apiConfig.provider] || { name: state.apiConfig.provider || "AI" };
+    const errorText = `⚠️ **Không thể kết nối đến máy chủ AI (${provPreset.name}):**\n${err.message}\n\n*Gợi ý:* Bạn có thể vào tab **"Thêm & Cài Đặt API"** để kiểm tra lại API Key ${provPreset.name} hoặc chuyển sang **"Chế Độ Demo"** để ứng dụng hoạt động ngay lập tức!`;
     const errorMsg = {
       id: "err_" + Date.now(),
       role: "assistant",
@@ -1738,11 +2033,100 @@ function renderHealthTracker() {
   }
 
   renderActivityList(dayLog.activities || []);
+  renderMacroSummary(dayLog, profile, targetCals);
   renderMealBlocks(dayLog.meals || {});
   renderHistoryChart();
 
   if (typeof calendarState !== "undefined" && calendarState.isOpen) {
     renderCalorieCalendar();
+  }
+}
+
+function renderMacroSummary(dayLog, profile, targetCals) {
+  const evalResult = checkDailyNutrientStatus(dayLog, profile);
+  const { current, targets, pStatus, cStatus, fStatus } = evalResult;
+
+  // 1. Protein
+  const elPCur = document.getElementById("val-macro-p-cur");
+  const elPTarget = document.getElementById("val-macro-p-target");
+  const elPBadge = document.getElementById("badge-macro-p-status");
+  const elPBar = document.getElementById("bar-macro-p");
+  const elPPct = document.getElementById("pct-macro-p");
+  const elPCal = document.getElementById("cal-macro-p");
+
+  if (elPCur) elPCur.textContent = current.protein;
+  if (elPTarget) elPTarget.textContent = targets.protein;
+  if (elPBadge) {
+    elPBadge.textContent = pStatus.label;
+    elPBadge.className = `macro-status-tag ${pStatus.type}`;
+  }
+  if (elPBar) {
+    elPBar.style.width = `${Math.min(100, pStatus.pct)}%`;
+    elPBar.className = pStatus.pct > 125 ? "macro-progress-fill protein over" : "macro-progress-fill protein";
+  }
+  if (elPPct) elPPct.textContent = `${pStatus.pct}% mục tiêu`;
+  if (elPCal) elPCal.textContent = `~${Math.round(current.protein * 4)} kcal`;
+
+  // 2. Carbs
+  const elCCur = document.getElementById("val-macro-c-cur");
+  const elCTarget = document.getElementById("val-macro-c-target");
+  const elCBadge = document.getElementById("badge-macro-c-status");
+  const elCBar = document.getElementById("bar-macro-c");
+  const elCPct = document.getElementById("pct-macro-c");
+  const elCCal = document.getElementById("cal-macro-c");
+
+  if (elCCur) elCCur.textContent = current.carbs;
+  if (elCTarget) elCTarget.textContent = targets.carbs;
+  if (elCBadge) {
+    elCBadge.textContent = cStatus.label;
+    elCBadge.className = `macro-status-tag ${cStatus.type}`;
+  }
+  if (elCBar) {
+    elCBar.style.width = `${Math.min(100, cStatus.pct)}%`;
+    elCBar.className = cStatus.pct > 125 ? "macro-progress-fill carbs over" : "macro-progress-fill carbs";
+  }
+  if (elCPct) elCPct.textContent = `${cStatus.pct}% mục tiêu`;
+  if (elCCal) elCCal.textContent = `~${Math.round(current.carbs * 4)} kcal`;
+
+  // 3. Fat
+  const elFCur = document.getElementById("val-macro-f-cur");
+  const elFTarget = document.getElementById("val-macro-f-target");
+  const elFBadge = document.getElementById("badge-macro-f-status");
+  const elFBar = document.getElementById("bar-macro-f");
+  const elFPct = document.getElementById("pct-macro-f");
+  const elFCal = document.getElementById("cal-macro-f");
+
+  if (elFCur) elFCur.textContent = current.fat;
+  if (elFTarget) elFTarget.textContent = targets.fat;
+  if (elFBadge) {
+    elFBadge.textContent = fStatus.label;
+    elFBadge.className = `macro-status-tag ${fStatus.type}`;
+  }
+  if (elFBar) {
+    elFBar.style.width = `${Math.min(100, fStatus.pct)}%`;
+    elFBar.className = fStatus.pct > 125 ? "macro-progress-fill fat over" : "macro-progress-fill fat";
+  }
+  if (elFPct) elFPct.textContent = `${fStatus.pct}% mục tiêu`;
+  if (elFCal) elFCal.textContent = `~${Math.round(current.fat * 9)} kcal`;
+
+  // 4. Nutrient Check Report Banner
+  const elBanner = document.getElementById("macro-status-banner");
+  const elIcon = document.getElementById("nutrient-check-icon");
+  const elTitle = document.getElementById("nutrient-check-title");
+  const elDesc = document.getElementById("nutrient-check-desc");
+  const elAdvice = document.getElementById("nutrient-check-advice");
+
+  if (elBanner) elBanner.className = `nutrient-check-banner ${evalResult.status}`;
+  if (elIcon) elIcon.textContent = evalResult.icon;
+  if (elTitle) elTitle.textContent = evalResult.title;
+  if (elDesc) elDesc.textContent = evalResult.desc;
+  if (elAdvice) {
+    if (evalResult.advice) {
+      elAdvice.textContent = evalResult.advice;
+      elAdvice.style.display = "inline-block";
+    } else {
+      elAdvice.style.display = "none";
+    }
   }
 }
 
@@ -1803,7 +2187,10 @@ function renderMealBlocks(meals) {
 
   mealDefs.forEach(def => {
     const list = meals[def.key] || [];
-    const mealCals = list.reduce((sum, item) => sum + (item.calories || 0), 0);
+    const mealCals = list.reduce((sum, item) => sum + (Number(item.calories) || 0), 0);
+    const mealP = Math.round(list.reduce((sum, item) => sum + (Number(item.protein) || 0), 0) * 10) / 10;
+    const mealC = Math.round(list.reduce((sum, item) => sum + (Number(item.carbs) || 0), 0) * 10) / 10;
+    const mealF = Math.round(list.reduce((sum, item) => sum + (Number(item.fat) || 0), 0) * 10) / 10;
 
     const block = document.createElement("div");
     block.className = "meal-block";
@@ -1813,11 +2200,20 @@ function renderMealBlocks(meals) {
       foodItemsHtml = `<div class="empty-meal-text">Chưa có món nào. Nhắn với Trợ lý AI hoặc bấm "+ Thêm món"</div>`;
     } else {
       list.forEach((item, idx) => {
+        const itemP = item.protein !== undefined ? item.protein : 0;
+        const itemC = item.carbs !== undefined ? item.carbs : 0;
+        const itemF = item.fat !== undefined ? item.fat : 0;
+
         foodItemsHtml += `
           <div class="meal-food-entry">
             <div class="food-entry-left">
               <span style="font-weight:600;">${escapeHtml(item.name)}</span>
               ${item.isAiLogged ? `<span class="ai-logged-badge" title="Được ghi tự động từ Trợ lý Chat AI">✨ AI ghi nhận</span>` : ""}
+              <div class="food-macro-badges">
+                <span class="macro-tag p" title="Protein (Đạm)">🥩 ${itemP}g P</span>
+                <span class="macro-tag c" title="Carbs (Tinh bột)">🍚 ${itemC}g C</span>
+                <span class="macro-tag f" title="Fat (Chất béo)">🥑 ${itemF}g F</span>
+              </div>
             </div>
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <span style="font-weight:700; color:#f59e0b;">+${item.calories} kcal</span>
@@ -1839,8 +2235,9 @@ function renderMealBlocks(meals) {
           <span>${def.icon}</span>
           <span class="meal-name">${def.name}</span>
         </div>
-        <div style="display:flex; align-items:center; gap:0.5rem;">
+        <div style="display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap; justify-content:flex-end;">
           <span class="meal-cal-badge">${mealCals} kcal</span>
+          ${list.length > 0 ? `<span class="meal-macro-summary" title="Tổng chất bữa này">(P: ${mealP}g | C: ${mealC}g | F: ${mealF}g)</span>` : ""}
           <button type="button" class="btn-subtle" style="padding:2px 6px; font-size:0.75rem;" onclick="openAddFoodModalForMeal('${def.key}')" title="Thêm món cho ${def.name}">+ Thêm</button>
         </div>
       </div>
@@ -1872,12 +2269,18 @@ function openEditFoodModal(mealKey, index) {
   const selectMeal = document.getElementById("edit-food-meal");
   const inputName = document.getElementById("edit-food-name");
   const inputCal = document.getElementById("edit-food-cal");
+  const inputP = document.getElementById("edit-food-p");
+  const inputC = document.getElementById("edit-food-c");
+  const inputF = document.getElementById("edit-food-f");
   const inputOrigMeal = document.getElementById("edit-food-orig-meal");
   const inputOrigIndex = document.getElementById("edit-food-orig-index");
 
   if (selectMeal) selectMeal.value = mealKey;
   if (inputName) inputName.value = item.name || "";
   if (inputCal) inputCal.value = item.calories !== undefined ? item.calories : 0;
+  if (inputP) inputP.value = item.protein !== undefined ? item.protein : 0;
+  if (inputC) inputC.value = item.carbs !== undefined ? item.carbs : 0;
+  if (inputF) inputF.value = item.fat !== undefined ? item.fat : 0;
   if (inputOrigMeal) inputOrigMeal.value = mealKey;
   if (inputOrigIndex) inputOrigIndex.value = index;
 
@@ -1898,6 +2301,9 @@ function handleSaveEditFood(e) {
   const newMealKey = document.getElementById("edit-food-meal")?.value;
   const newName = document.getElementById("edit-food-name")?.value.trim();
   const newCal = parseInt(document.getElementById("edit-food-cal")?.value, 10) || 0;
+  const newP = parseFloat(document.getElementById("edit-food-p")?.value) || 0;
+  const newC = parseFloat(document.getElementById("edit-food-c")?.value) || 0;
+  const newF = parseFloat(document.getElementById("edit-food-f")?.value) || 0;
 
   if (!newName) return;
 
@@ -1913,20 +2319,26 @@ function handleSaveEditFood(e) {
   if (origMealKey === newMealKey) {
     existingItem.name = newName;
     existingItem.calories = newCal;
+    existingItem.protein = newP;
+    existingItem.carbs = newC;
+    existingItem.fat = newF;
   } else {
     origList.splice(origIndex, 1);
     if (!dayLog.meals[newMealKey]) dayLog.meals[newMealKey] = [];
     dayLog.meals[newMealKey].push({
       ...existingItem,
       name: newName,
-      calories: newCal
+      calories: newCal,
+      protein: newP,
+      carbs: newC,
+      fat: newF
     });
   }
 
   saveDailyLogs();
   renderHealthTracker();
   closeEditFoodModal();
-  showToast(`Đã cập nhật món "${newName}" (${newCal} kcal)!`, "success");
+  showToast(`Đã cập nhật món "${newName}" (${newCal} kcal | ${newP}g P, ${newC}g C, ${newF}g F)!`, "success");
 }
 
 function handleDeleteFromEditModal() {
@@ -2007,25 +2419,208 @@ function renderHistoryChart() {
 // =============================================================================
 // 8. API SETTINGS & VERIFICATION
 // =============================================================================
+function updateModelDropdown(provider, selectedModel) {
+  const selectModel = document.getElementById("select-model-preset");
+  if (!selectModel) return;
+
+  const p = provider || "gemini";
+  const preset = PROVIDER_PRESETS[p] || PROVIDER_PRESETS.gemini;
+  const models = preset.models || [];
+
+  selectModel.innerHTML = "";
+
+  models.forEach((m, idx) => {
+    const opt = document.createElement("option");
+    opt.value = m;
+    let label = m;
+    if (idx === 0) label += " (Khuyên dùng)";
+    else if (m.includes(":free")) label += " (Miễn phí)";
+    opt.textContent = label;
+    if (m === selectedModel) opt.selected = true;
+    selectModel.appendChild(opt);
+  });
+
+  const customOpt = document.createElement("option");
+  customOpt.value = "custom";
+  customOpt.textContent = "-- Nhập tên model khác --";
+  if (!models.includes(selectedModel)) {
+    customOpt.selected = true;
+  }
+  selectModel.appendChild(customOpt);
+}
+
+function updateApiGuideUI(provider, config) {
+  const guideTitle = document.getElementById("guide-title");
+  const guideDesc = document.getElementById("guide-desc");
+  const guideCurl = document.getElementById("guide-curl-preview");
+  const guideLinks = document.getElementById("guide-links");
+  const hintKey = document.getElementById("hint-api-key");
+  const hintUrl = document.getElementById("hint-api-url");
+  const labelKey = document.getElementById("label-api-key-text");
+  const apiSubtitle = document.getElementById("api-config-subtitle");
+
+  const p = provider || "gemini";
+  const provPreset = PROVIDER_PRESETS[p] || PROVIDER_PRESETS.gemini;
+  const currentModel = config.model || provPreset.model || "mặc định";
+  const sampleKey = (config.apiKey && config.apiKey.trim()) ? (config.apiKey.slice(0, 8) + "...") : "YOUR_API_KEY";
+
+  if (labelKey) {
+    labelKey.textContent = `API Key (${provPreset.name})`;
+  }
+
+  if (apiSubtitle) {
+    apiSubtitle.textContent = `Hỗ trợ kết nối ${provPreset.name}, Google Gemini, OpenRouter, OpenAI, Groq`;
+  }
+
+  if (p === "openrouter") {
+    if (hintKey) {
+      hintKey.innerHTML = `Gửi trong header <code>Authorization: Bearer</code> tới OpenRouter API. Key được lưu an toàn trong trình duyệt (localStorage).`;
+    }
+    if (hintUrl) {
+      hintUrl.innerHTML = `Định dạng: <code>https://openrouter.ai/api/v1/chat/completions</code>`;
+    }
+    if (guideTitle) guideTitle.textContent = "Cấu Trúc Gọi OpenRouter API Đang Dùng";
+    if (guideDesc) guideDesc.textContent = "Hệ thống kết nối trực tiếp qua chuẩn OpenAI-compatible của OpenRouter:";
+    if (guideCurl) {
+      guideCurl.textContent = `curl "https://openrouter.ai/api/v1/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${sampleKey}" \\
+  -H "HTTP-Referer: ${window.location.origin || "http://localhost:3000"}" \\
+  -H "X-Title: NutriAI Assistant" \\
+  -X POST \\
+  -d '{
+    "model": "${currentModel}",
+    "messages": [
+      { "role": "user", "content": "Xin chào, hãy phân tích calo giúp tôi" }
+    ]
+  }'`;
+    }
+    if (guideLinks) {
+      guideLinks.innerHTML = `
+        <li><strong>Lấy Key OpenRouter:</strong> Truy cập <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter Keys (openrouter.ai/keys)</a> để tạo API key.</li>
+        <li><strong>Mô hình Miễn Phí (Free):</strong> <code>meta-llama/llama-3.3-70b-instruct:free</code>, <code>google/gemini-2.0-flash-exp:free</code>, <code>deepseek/deepseek-r1:free</code>, <code>mistralai/mistral-7b-instruct:free</code>.</li>
+        <li><strong>Mô hình Cao Cấp giá rẻ:</strong> <code>deepseek/deepseek-chat</code>, <code>openai/gpt-4o-mini</code>, <code>qwen/qwen-2.5-72b-instruct</code>.</li>
+      `;
+    }
+  } else if (p === "openai") {
+    if (hintKey) hintKey.innerHTML = `Gửi trong header <code>Authorization: Bearer</code> tới OpenAI. Key lưu an toàn trong trình duyệt.`;
+    if (hintUrl) hintUrl.innerHTML = `Định dạng: <code>https://api.openai.com/v1/chat/completions</code>`;
+    if (guideTitle) guideTitle.textContent = "Cấu Trúc Gọi OpenAI API Đang Dùng";
+    if (guideDesc) guideDesc.textContent = "Kết nối trực tiếp qua REST API của OpenAI:";
+    if (guideCurl) {
+      guideCurl.textContent = `curl "https://api.openai.com/v1/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${sampleKey}" \\
+  -X POST \\
+  -d '{
+    "model": "${currentModel}",
+    "messages": [{ "role": "user", "content": "Xin chào" }]
+  }'`;
+    }
+    if (guideLinks) {
+      guideLinks.innerHTML = `<li><strong>Lấy Key OpenAI:</strong> Truy cập <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform</a>.</li>`;
+    }
+  } else if (p === "groq") {
+    if (hintKey) hintKey.innerHTML = `Gửi trong header <code>Authorization: Bearer</code> tới Groq Cloud API.`;
+    if (hintUrl) hintUrl.innerHTML = `Định dạng: <code>https://api.groq.com/openai/v1/chat/completions</code>`;
+    if (guideTitle) guideTitle.textContent = "Cấu Trúc Gọi Groq API Đang Dùng";
+    if (guideDesc) guideDesc.textContent = "Kết nối tốc độ cao LPU qua Groq Cloud:";
+    if (guideCurl) {
+      guideCurl.textContent = `curl "https://api.groq.com/openai/v1/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${sampleKey}" \\
+  -X POST \\
+  -d '{
+    "model": "${currentModel}",
+    "messages": [{ "role": "user", "content": "Xin chào" }]
+  }'`;
+    }
+    if (guideLinks) {
+      guideLinks.innerHTML = `<li><strong>Lấy Key Groq:</strong> Truy cập <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq Console</a> (miễn phí và siêu nhanh).</li>`;
+    }
+  } else if (p === "custom") {
+    if (hintKey) hintKey.innerHTML = `Header <code>Authorization: Bearer</code> (nếu máy chủ yêu cầu).`;
+    if (hintUrl) hintUrl.innerHTML = `Định dạng máy chủ OpenAI-compatible cục bộ (ví dụ: Ollama, vLLM, LM Studio).`;
+    if (guideTitle) guideTitle.textContent = "Cấu Trúc Gọi API Custom Đang Dùng";
+    if (guideDesc) guideDesc.textContent = "Kết nối tới endpoint OpenAI-compatible tùy chỉnh:";
+    if (guideCurl) {
+      guideCurl.textContent = `curl "${config.baseUrl || "http://localhost:11434/v1"}/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -X POST \\
+  -d '{"model": "${currentModel}", "messages": [{"role": "user", "content": "Xin chào"}]}'`;
+    }
+    if (guideLinks) {
+      guideLinks.innerHTML = `<li>Phù hợp chạy offline nội bộ bằng Ollama (<code>ollama run llama3</code>) hoặc LM Studio.</li>`;
+    }
+  } else if (p === "demo") {
+    if (hintKey) hintKey.innerHTML = `Chế độ Demo hoạt động cục bộ 100%, không gửi dữ liệu ra bên ngoài.`;
+    if (hintUrl) hintUrl.innerHTML = `Không cần Endpoint URL.`;
+    if (guideTitle) guideTitle.textContent = "Chế Độ Demo Offline";
+    if (guideDesc) guideDesc.textContent = "Bộ giả lập AI thông minh NutriAI Smart Simulator tích hợp sẵn trong trình duyệt.";
+    if (guideCurl) guideCurl.textContent = `// Không cần cURL, ứng dụng tự động phân tích calo trực tiếp trên trình duyệt`;
+    if (guideLinks) {
+      guideLinks.innerHTML = `<li>Không cần API key hoặc kết nối internet để thử nghiệm tính năng cơ bản.</li>`;
+    }
+  } else {
+    // Default Gemini
+    if (hintKey) {
+      hintKey.innerHTML = `Gửi trực tiếp trong header <code>X-goog-api-key</code> tới máy chủ Google AI. Key được lưu an toàn trong trình duyệt (localStorage).`;
+    }
+    if (hintUrl) {
+      hintUrl.innerHTML = `Định dạng: <code>https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent</code>`;
+    }
+    if (guideTitle) guideTitle.textContent = "Cấu Trúc Gọi API Google Gemini Đang Dùng";
+    if (guideDesc) guideDesc.textContent = "Hệ thống kết nối trực tiếp theo định dạng chuẩn của Google Generative Language API:";
+    if (guideCurl) {
+      guideCurl.textContent = `curl "https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent" \\
+  -H 'Content-Type: application/json' \\
+  -H 'X-goog-api-key: ${sampleKey}' \\
+  -X POST \\
+  -d '{
+    "contents": [
+      {
+        "role": "user",
+        "parts": [{ "text": "Explain how AI works in a few words" }]
+      }
+    ]
+  }'`;
+    }
+    if (guideLinks) {
+      guideLinks.innerHTML = `
+        <li><strong>Lấy Key miễn phí:</strong> Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio (aistudio.google.com)</a> để tạo Gemini API Key.</li>
+        <li><strong>Mô hình:</strong> <code>gemini-flash-latest</code>, <code>gemini-1.5-flash</code> hoặc <code>gemini-2.0-flash</code>.</li>
+        <li><strong>Chế độ Demo:</strong> Nếu chưa có key ngay, chọn "Chế Độ Demo" để thử nghiệm.</li>
+      `;
+    }
+  }
+}
+
 function syncApiSettingsUI() {
   const config = state.apiConfig;
+  const p = config.provider || "gemini";
+  const provPreset = PROVIDER_PRESETS[p] || PROVIDER_PRESETS.gemini;
 
   const statusDot = document.getElementById("api-status-dot");
   const statusText = document.getElementById("api-status-text");
   const chatModelName = document.getElementById("chat-model-name");
+  const brandTag = document.querySelector(".brand-tag");
 
-  if (config.provider === "demo") {
+  if (brandTag) {
+    brandTag.textContent = p === "demo" ? "Demo AI" : `${provPreset.name} AI`;
+  }
+
+  if (p === "demo") {
     if (statusDot) statusDot.className = "status-dot demo";
     if (statusText) statusText.textContent = "Chế độ Demo (Mô phỏng)";
     if (chatModelName) chatModelName.textContent = "NutriAI Smart Simulator (Demo)";
   } else if (config.apiKey && config.apiKey.trim()) {
     if (statusDot) statusDot.className = "status-dot active";
-    if (statusText) statusText.textContent = `Gemini: ${config.model || "gemini-flash-latest"}`;
-    if (chatModelName) chatModelName.textContent = `NutriAI Assistant (${config.model || "gemini-flash-latest"})`;
+    if (statusText) statusText.textContent = `${provPreset.name}: ${config.model || provPreset.model}`;
+    if (chatModelName) chatModelName.textContent = `NutriAI Assistant (${provPreset.name} - ${config.model || provPreset.model})`;
   } else {
     if (statusDot) statusDot.className = "status-dot";
-    if (statusText) statusText.textContent = "Chưa có API Key";
-    if (chatModelName) chatModelName.textContent = "NutriAI (Chưa cấu hình API Key)";
+    if (statusText) statusText.textContent = `Chưa có API Key (${provPreset.name})`;
+    if (chatModelName) chatModelName.textContent = `NutriAI (${provPreset.name} - Chưa cấu hình Key)`;
   }
 
   document.querySelectorAll(".provider-card").forEach(card => {
@@ -2037,23 +2632,13 @@ function syncApiSettingsUI() {
   if (inputKey) inputKey.value = config.apiKey || "";
 
   const inputUrl = document.getElementById("input-api-url");
-  if (inputUrl) inputUrl.value = config.baseUrl || PROVIDER_PRESETS.gemini.baseUrl;
+  if (inputUrl) inputUrl.value = config.baseUrl || provPreset.baseUrl || "";
 
-  const selectModel = document.getElementById("select-model-preset");
   const inputCustomModel = document.getElementById("input-model-custom");
+  const currentModel = config.model || provPreset.model;
+  if (inputCustomModel) inputCustomModel.value = currentModel;
 
-  if (inputCustomModel) inputCustomModel.value = config.model || "gemini-flash-latest";
-  if (selectModel) {
-    let found = false;
-    for (let opt of selectModel.options) {
-      if (opt.value === config.model) {
-        selectModel.value = config.model;
-        found = true;
-        break;
-      }
-    }
-    if (!found) selectModel.value = "custom";
-  }
+  updateModelDropdown(config.provider, currentModel);
 
   const inputTemp = document.getElementById("input-temperature");
   const labelTemp = document.getElementById("label-temp-val");
@@ -2062,6 +2647,8 @@ function syncApiSettingsUI() {
 
   const promptInput = document.getElementById("input-system-prompt");
   if (promptInput) promptInput.value = state.systemPrompt;
+
+  updateApiGuideUI(config.provider, config);
 }
 
 async function testApiConnection() {
@@ -2071,6 +2658,10 @@ async function testApiConnection() {
   if (!resultEl || !btnTest) return;
 
   const { provider, apiKey, baseUrl, model } = state.apiConfig;
+  const p = provider || "gemini";
+  const provPreset = PROVIDER_PRESETS[p] || PROVIDER_PRESETS.gemini;
+  const provName = provPreset.name;
+  const currentModel = model || provPreset.model || "mặc định";
 
   if (provider === "demo") {
     resultEl.className = "conn-test-result success";
@@ -2080,14 +2671,14 @@ async function testApiConnection() {
 
   if (!apiKey || !apiKey.trim()) {
     resultEl.className = "conn-test-result error";
-    resultEl.innerHTML = `<span>⚠️ Vui lòng nhập API Key trước khi kiểm tra kết nối.</span>`;
+    resultEl.innerHTML = `<span>⚠️ Vui lòng nhập API Key (${escapeHtml(provName)}) trước khi kiểm tra kết nối.</span>`;
     return;
   }
 
   btnTest.disabled = true;
   resultEl.className = "conn-test-result";
   resultEl.style.display = "flex";
-  resultEl.innerHTML = `<span>⏳ Đang kiểm tra kết nối tới Google Gemini (${escapeHtml(model || "gemini-flash-latest")})...</span>`;
+  resultEl.innerHTML = `<span>⏳ Đang kiểm tra kết nối tới ${escapeHtml(provName)} (${escapeHtml(currentModel)})...</span>`;
 
   const startTime = Date.now();
 
@@ -2100,12 +2691,12 @@ async function testApiConnection() {
     const latency = Date.now() - startTime;
 
     resultEl.className = "conn-test-result success";
-    resultEl.innerHTML = `<span>✅ Kết nối thành công tới mô hình <strong>${escapeHtml(model || "gemini-flash-latest")}</strong> (${latency}ms)!<br>Phản hồi từ Gemini: <em>"${escapeHtml(response.slice(0, 100))}..."</em></span>`;
-    showToast("Kết nối Gemini API thành công!", "success");
+    resultEl.innerHTML = `<span>✅ Kết nối thành công tới ${escapeHtml(provName)} - mô hình <strong>${escapeHtml(currentModel)}</strong> (${latency}ms)!<br>Phản hồi: <em>"${escapeHtml(response.slice(0, 120))}..."</em></span>`;
+    showToast(`Kết nối ${provName} API thành công!`, "success");
   } catch (err) {
     resultEl.className = "conn-test-result error";
-    resultEl.innerHTML = `<span>❌ Kết nối thất bại: ${escapeHtml(err.message)}</span>`;
-    showToast("Kết nối API thất bại: " + err.message, "error");
+    resultEl.innerHTML = `<span>❌ Kết nối ${escapeHtml(provName)} thất bại: ${escapeHtml(err.message)}</span>`;
+    showToast(`Kết nối API thất bại: ${err.message}`, "error");
   } finally {
     btnTest.disabled = false;
   }
@@ -2759,6 +3350,9 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
       const mealKey = document.getElementById("manual-food-meal").value;
       const name = document.getElementById("manual-food-name").value.trim();
       const cal = parseInt(document.getElementById("manual-food-cal").value, 10) || 0;
+      const p = parseFloat(document.getElementById("manual-food-p")?.value) || 0;
+      const c = parseFloat(document.getElementById("manual-food-c")?.value) || 0;
+      const f = parseFloat(document.getElementById("manual-food-f")?.value) || 0;
 
       if (!name || cal <= 0) return;
 
@@ -2767,9 +3361,9 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
         id: "meal_manual_" + Date.now(),
         name,
         calories: cal,
-        protein: 0,
-        carbs: 0,
-        fat: 0,
+        protein: p,
+        carbs: c,
+        fat: f,
         isAiLogged: false,
         time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
       });
@@ -2777,7 +3371,16 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
       saveDailyLogs();
       renderHealthTracker();
       closeAddFoodModal();
-      showToast(`Đã thêm "${name}" (+${cal} kcal) vào nhật ký.`, "success");
+      showToast(`Đã thêm "${name}" (+${cal} kcal | ${p}g P, ${c}g C, ${f}g F) vào nhật ký.`, "success");
+    });
+  }
+
+  const btnAskAiCheck = document.getElementById("btn-ask-ai-macro-check");
+  if (btnAskAiCheck) {
+    btnAskAiCheck.addEventListener("click", () => {
+      switchTab("tab-chat");
+      const checkPrompt = "Hôm nay tôi đã đủ chất hay thừa chất gì chưa? Hãy kiểm tra dinh dưỡng giúp tôi.";
+      handleSendMessage(checkPrompt);
     });
   }
 
@@ -2846,12 +3449,35 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
     });
   }
 
+  if (inputApiKey) {
+    const handleKeyDetection = () => {
+      const val = inputApiKey.value.trim();
+      const detected = detectProviderFromKey(val);
+      if (detected && detected !== state.apiConfig.provider) {
+        state.apiConfig.provider = detected;
+        const preset = PROVIDER_PRESETS[detected];
+        if (preset) {
+          state.apiConfig.baseUrl = preset.baseUrl;
+          state.apiConfig.model = preset.model;
+        }
+        syncApiSettingsUI();
+        showToast(`Đã tự động chuyển sang nhà cung cấp: ${PROVIDER_PRESETS[detected].name}!`, "success");
+      }
+    };
+
+    inputApiKey.addEventListener("input", handleKeyDetection);
+    inputApiKey.addEventListener("paste", () => {
+      setTimeout(handleKeyDetection, 60);
+    });
+  }
+
   const selectModel = document.getElementById("select-model-preset");
   const inputCustomModel = document.getElementById("input-model-custom");
   if (selectModel && inputCustomModel) {
     selectModel.addEventListener("change", () => {
       if (selectModel.value !== "custom") {
         inputCustomModel.value = selectModel.value;
+        state.apiConfig.model = selectModel.value;
       }
     });
   }
@@ -2873,18 +3499,24 @@ if (typeof document !== "undefined") { document.addEventListener("DOMContentLoad
       const modelVal = document.getElementById("input-model-custom").value.trim();
       const tempVal = parseFloat(document.getElementById("input-temperature").value);
 
-      state.apiConfig.apiKey = apiKeyVal;
-      state.apiConfig.baseUrl = baseUrlVal;
-      state.apiConfig.model = modelVal || "gemini-flash-latest";
-      state.apiConfig.temperature = tempVal;
-
-      if (apiKeyVal && state.apiConfig.provider === "demo") {
+      // Tự động nhận diện provider nếu người dùng dán key đặc thù (OpenRouter / Groq / OpenAI / Gemini)
+      const detected = detectProviderFromKey(apiKeyVal);
+      if (detected && detected !== state.apiConfig.provider && (state.apiConfig.provider === "gemini" || state.apiConfig.provider === "demo")) {
+        state.apiConfig.provider = detected;
+      } else if (apiKeyVal && state.apiConfig.provider === "demo") {
         state.apiConfig.provider = "gemini";
       }
 
+      const activePreset = PROVIDER_PRESETS[state.apiConfig.provider] || PROVIDER_PRESETS.gemini;
+
+      state.apiConfig.apiKey = apiKeyVal;
+      state.apiConfig.baseUrl = baseUrlVal || activePreset.baseUrl;
+      state.apiConfig.model = modelVal || activePreset.model;
+      state.apiConfig.temperature = isNaN(tempVal) ? 0.5 : tempVal;
+
       saveApiConfig(state.apiConfig);
       syncApiSettingsUI();
-      showToast("Đã lưu cấu hình API thành công!", "success");
+      showToast(`Đã lưu cấu hình API (${activePreset.name}) thành công!`, "success");
     });
   }
 

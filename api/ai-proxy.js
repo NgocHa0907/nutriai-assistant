@@ -54,7 +54,7 @@ module.exports = async function handler(req, res) {
   );
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-goog-api-key"
+    "Content-Type, Authorization, X-goog-api-key, HTTP-Referer, X-Title"
   );
 
   // OPTIONS

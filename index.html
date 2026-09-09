@@ -130,6 +130,9 @@
 
           <!-- Prompt Suggestions / Quick Chips -->
           <div class="chat-suggestions">
+            <button class="suggestion-chip" data-prompt="Hôm nay tôi đã đủ chất hay thừa chất gì chưa? Hãy kiểm tra dinh dưỡng giúp tôi.">
+              <span>🔍 Hôm nay đã đủ chất chưa?</span>
+            </button>
             <button class="suggestion-chip" data-prompt="Bữa sáng tôi ăn 2 quả trứng 1 cái ngô">
               <span>🌽🍳 Bữa sáng: 2 trứng + 1 ngô</span>
             </button>
@@ -366,6 +369,103 @@
 
           </div>
 
+          <!-- Card: Dinh Dưỡng Đa Lượng (Macro) & Đánh Giá Đủ / Thừa Chất -->
+          <div class="dash-card macro-summary-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <div class="card-icon purple">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 10 10H12V2z"></path><path d="M12 12 2.1 10.5"></path></svg>
+                </div>
+                <div>
+                  <h3 class="card-title">Cân Bằng Dinh Dưỡng Đa Lượng (Macro)</h3>
+                  <p class="card-subtitle">Theo dõi Protein, Carbs, Fat và kiểm tra đủ hay thừa/thiếu chất hôm nay</p>
+                </div>
+              </div>
+              <button id="btn-ask-ai-macro-check" type="button" class="btn-subtle btn-ai-check" title="Nhắn tin nhờ AI phân tích dinh dưỡng chi tiết">
+                <span>🤖 Hỏi AI Đánh Giá Chi Tiết</span>
+              </button>
+            </div>
+
+            <!-- 3 Macro Cards Grid -->
+            <div class="macro-cards-grid">
+              <!-- Protein -->
+              <div class="macro-metric-card protein">
+                <div class="macro-header">
+                  <div class="macro-name">
+                    <span class="macro-icon">🥩</span>
+                    <span>Protein (Đạm)</span>
+                  </div>
+                  <span class="macro-status-tag" id="badge-macro-p-status">Chưa nạp</span>
+                </div>
+                <div class="macro-numbers">
+                  <span class="macro-val-current" id="val-macro-p-cur">0</span>
+                  <span class="macro-val-target">/ <span id="val-macro-p-target">117</span>g</span>
+                </div>
+                <div class="macro-progress-track">
+                  <div class="macro-progress-fill protein" id="bar-macro-p" style="width: 0%;"></div>
+                </div>
+                <div class="macro-footer-info">
+                  <span id="pct-macro-p">0% mục tiêu</span>
+                  <span id="cal-macro-p">0 kcal</span>
+                </div>
+              </div>
+
+              <!-- Carbs -->
+              <div class="macro-metric-card carbs">
+                <div class="macro-header">
+                  <div class="macro-name">
+                    <span class="macro-icon">🍚</span>
+                    <span>Carbs (Tinh bột)</span>
+                  </div>
+                  <span class="macro-status-tag" id="badge-macro-c-status">Chưa nạp</span>
+                </div>
+                <div class="macro-numbers">
+                  <span class="macro-val-current" id="val-macro-c-cur">0</span>
+                  <span class="macro-val-target">/ <span id="val-macro-c-target">236</span>g</span>
+                </div>
+                <div class="macro-progress-track">
+                  <div class="macro-progress-fill carbs" id="bar-macro-c" style="width: 0%;"></div>
+                </div>
+                <div class="macro-footer-info">
+                  <span id="pct-macro-c">0% mục tiêu</span>
+                  <span id="cal-macro-c">0 kcal</span>
+                </div>
+              </div>
+
+              <!-- Fat -->
+              <div class="macro-metric-card fat">
+                <div class="macro-header">
+                  <div class="macro-name">
+                    <span class="macro-icon">🥑</span>
+                    <span>Fat (Chất béo)</span>
+                  </div>
+                  <span class="macro-status-tag" id="badge-macro-f-status">Chưa nạp</span>
+                </div>
+                <div class="macro-numbers">
+                  <span class="macro-val-current" id="val-macro-f-cur">0</span>
+                  <span class="macro-val-target">/ <span id="val-macro-f-target">53</span>g</span>
+                </div>
+                <div class="macro-progress-track">
+                  <div class="macro-progress-fill fat" id="bar-macro-f" style="width: 0%;"></div>
+                </div>
+                <div class="macro-footer-info">
+                  <span id="pct-macro-f">0% mục tiêu</span>
+                  <span id="cal-macro-f">0 kcal</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nutrient Check Report / Banner -->
+            <div id="macro-status-banner" class="nutrient-check-banner neutral">
+              <div class="nutrient-check-icon" id="nutrient-check-icon">🥗</div>
+              <div class="nutrient-check-content">
+                <div class="nutrient-check-title" id="nutrient-check-title">Kiểm tra độ cân bằng dinh dưỡng hôm nay</div>
+                <div class="nutrient-check-desc" id="nutrient-check-desc">Chưa có dữ liệu bữa ăn nào trong ngày này. Hãy chia sẻ món ăn với Trợ lý AI hoặc bấm "+ Thêm món" để tự động kiểm tra đủ chất hay thừa chất!</div>
+                <div class="nutrient-check-advice" id="nutrient-check-advice" style="display:none;"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Bottom Grid: Calo Tiêu Hao Vận Động + Calo Nạp Vào Bữa Ăn -->
           <div class="health-grid-bottom">
 
@@ -555,7 +655,7 @@
                 </div>
                 <div>
                   <h3 class="card-title">Cấu Hình Kết Nối API</h3>
-                  <p class="card-subtitle">Hỗ trợ kết nối chuẩn Google Generative Language API với header <code>X-goog-api-key</code></p>
+                  <p class="card-subtitle" id="api-config-subtitle">Hỗ trợ kết nối OpenRouter, Google Gemini, OpenAI, Groq</p>
                 </div>
               </div>
             </div>
@@ -564,7 +664,7 @@
               <!-- API Key field -->
               <div class="form-group" id="group-api-key">
                 <label class="form-label" for="input-api-key">
-                  <span>API Key (Google Gemini / OpenAI)</span>
+                  <span id="label-api-key-text">API Key</span>
                   <span style="color:var(--color-danger)">*</span>
                 </label>
                 <div class="password-input-group">
@@ -572,14 +672,14 @@
                     type="password"
                     id="input-api-key"
                     class="form-input"
-                    placeholder="AIzaSy... hoặc sk-..."
+                    placeholder="sk-or-v1-... hoặc AIzaSy... hoặc sk-..."
                     autocomplete="off">
                   <button type="button" id="btn-toggle-key-vis" class="password-toggle-btn" title="Hiện/Ẩn Key">
                     <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                   </button>
                 </div>
-                <div style="font-size:0.75rem; color:var(--text-muted); margin-top: 3px;">
-                  Gửi trực tiếp trong header <code>X-goog-api-key</code> tới máy chủ Google AI. Key được lưu an toàn trong trình duyệt (localStorage).
+                <div id="hint-api-key" style="font-size:0.75rem; color:var(--text-muted); margin-top: 3px;">
+                  Nhập API Key tương ứng với nhà cung cấp đã chọn. Key được lưu an toàn trong trình duyệt (localStorage).
                 </div>
               </div>
 
@@ -591,8 +691,8 @@
                   id="input-api-url"
                   class="form-input"
                   value="https://generativelanguage.googleapis.com/v1beta/models">
-                <div style="font-size:0.75rem; color:var(--text-muted); margin-top: 3px;">
-                  Định dạng: <code style="word-break: break-all;">https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent</code>
+                <div id="hint-api-url" style="font-size:0.75rem; color:var(--text-muted); margin-top: 3px;">
+                  Định dạng URL Endpoint của nhà cung cấp đã chọn.
                 </div>
               </div>
 
@@ -700,10 +800,10 @@
           <div class="api-guide-box">
             <h4>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-              Cấu Trúc Gọi API Google Gemini Đang Dùng
+              <span id="guide-title">Cấu Trúc Gọi API Đang Dùng</span>
             </h4>
-            <p style="margin-bottom:0.5rem;">Hệ thống kết nối trực tiếp theo định dạng chuẩn của Google:</p>
-            <pre style="background:var(--bg-secondary); padding:0.75rem; border-radius:var(--radius-sm); font-size:0.78rem; overflow-x:auto; border:1px solid var(--border-color); margin-bottom:0.75rem;">curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" \
+            <p id="guide-desc" style="margin-bottom:0.5rem;">Hệ thống kết nối trực tiếp theo định dạng chuẩn:</p>
+            <pre id="guide-curl-preview" style="background:var(--bg-secondary); padding:0.75rem; border-radius:var(--radius-sm); font-size:0.78rem; overflow-x:auto; border:1px solid var(--border-color); margin-bottom:0.75rem;">curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" \
   -H 'Content-Type: application/json' \
   -H 'X-goog-api-key: YOUR_API_KEY' \
   -X POST \
@@ -715,9 +815,9 @@
       }
     ]
   }'</pre>
-            <ul>
+            <ul id="guide-links">
               <li><strong>Lấy Key miễn phí:</strong> Truy cập <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio (aistudio.google.com)</a> để tạo Gemini API Key.</li>
-              <li><strong>Mô hình:</strong> <code>gemini-flash-latest</code>, <code>gemini-1.5-flash</code> hoặc <code>gemini-2.0-flash</code> (tốc độ nhanh và độ chính xác phân tích calo rất cao).</li>
+              <li><strong>Mô hình:</strong> <code>gemini-flash-latest</code>, <code>gemini-1.5-flash</code> hoặc <code>gemini-2.0-flash</code>.</li>
               <li><strong>Chế độ Demo:</strong> Nếu chưa có key ngay, chỉ cần chọn "Chế Độ Demo" để thử nghiệm đầy đủ mọi tính năng.</li>
             </ul>
           </div>
@@ -756,9 +856,25 @@
           <input type="text" id="manual-food-name" class="form-input" placeholder="Ví dụ: 1 bát phở bò, 2 quả trứng..." required>
         </div>
 
-        <div class="form-group" style="margin-bottom:1.25rem;">
+        <div class="form-group" style="margin-bottom:0.75rem;">
           <label class="form-label" for="manual-food-cal">Lượng Calo (kcal)</label>
           <input type="number" id="manual-food-cal" class="form-input" placeholder="Ví dụ: 260" min="1" required>
+        </div>
+
+        <!-- Macro breakdown inputs -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.5rem; margin-bottom:1.25rem;">
+          <div class="form-group">
+            <label class="form-label" for="manual-food-p" style="font-size:0.75rem;">🥩 Protein (g)</label>
+            <input type="number" id="manual-food-p" class="form-input" placeholder="0" min="0" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="manual-food-c" style="font-size:0.75rem;">🍚 Carbs (g)</label>
+            <input type="number" id="manual-food-c" class="form-input" placeholder="0" min="0" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="manual-food-f" style="font-size:0.75rem;">🥑 Fat (g)</label>
+            <input type="number" id="manual-food-f" class="form-input" placeholder="0" min="0" step="0.1">
+          </div>
         </div>
 
         <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
@@ -798,9 +914,25 @@
           <input type="text" id="edit-food-name" class="form-input" placeholder="Ví dụ: 1 bát phở bò, 2 quả trứng..." required>
         </div>
 
-        <div class="form-group" style="margin-bottom:1.25rem;">
+        <div class="form-group" style="margin-bottom:0.75rem;">
           <label class="form-label" for="edit-food-cal">Lượng Calo (kcal)</label>
           <input type="number" id="edit-food-cal" class="form-input" placeholder="Ví dụ: 260" min="0" required>
+        </div>
+
+        <!-- Macro breakdown edit inputs -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.5rem; margin-bottom:1.25rem;">
+          <div class="form-group">
+            <label class="form-label" for="edit-food-p" style="font-size:0.75rem;">🥩 Protein (g)</label>
+            <input type="number" id="edit-food-p" class="form-input" placeholder="0" min="0" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-food-c" style="font-size:0.75rem;">🍚 Carbs (g)</label>
+            <input type="number" id="edit-food-c" class="form-input" placeholder="0" min="0" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-food-f" style="font-size:0.75rem;">🥑 Fat (g)</label>
+            <input type="number" id="edit-food-f" class="form-input" placeholder="0" min="0" step="0.1">
+          </div>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center;">

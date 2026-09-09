@@ -71,7 +71,7 @@ function handleAiProxy(req, res) {
           res.writeHead(proxyRes.statusCode || 200, {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-goog-api-key"
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-goog-api-key, HTTP-Referer, X-Title"
           });
           res.end(responseBody);
         });
@@ -99,10 +99,10 @@ function handleAiProxy(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  // Enable CORS including X-goog-api-key for Gemini
+  // Enable CORS including X-goog-api-key, OpenRouter headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-goog-api-key");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-goog-api-key, HTTP-Referer, X-Title");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);

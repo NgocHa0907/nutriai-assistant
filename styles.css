@@ -2602,4 +2602,292 @@ body {
   }
 }
 
+/* =============================================================================
+   MACRONUTRIENT (PROTEIN / CARBS / FAT) & NUTRIENT CHECK STYLING
+   ============================================================================= */
+.macro-summary-card {
+  margin-top: 0;
+}
+
+.btn-ai-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(14, 165, 233, 0.12));
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary-border);
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-ai-check:hover {
+  background: var(--accent-primary);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.macro-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.macro-metric-card {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border-top: 3px solid transparent;
+  transition: var(--transition);
+}
+
+.macro-metric-card.protein {
+  border-top-color: #8b5cf6;
+}
+
+.macro-metric-card.carbs {
+  border-top-color: #f59e0b;
+}
+
+.macro-metric-card.fat {
+  border-top-color: #10b981;
+}
+
+.macro-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.macro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.macro-name {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.macro-icon {
+  font-size: 1rem;
+}
+
+.macro-status-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
+.macro-status-tag.ok {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.macro-status-tag.low {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.macro-status-tag.high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.macro-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.macro-val-current {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.macro-metric-card.protein .macro-val-current {
+  color: #8b5cf6;
+}
+
+.macro-metric-card.carbs .macro-val-current {
+  color: #d97706;
+}
+
+.macro-metric-card.fat .macro-val-current {
+  color: #059669;
+}
+
+.macro-val-target {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.macro-progress-track {
+  width: 100%;
+  height: 7px;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+[data-theme="dark"] .macro-progress-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.macro-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.macro-progress-fill.protein {
+  background: linear-gradient(90deg, #8b5cf6, #a855f7);
+}
+
+.macro-progress-fill.carbs {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.macro-progress-fill.fat {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.macro-progress-fill.over {
+  background: #ef4444 !important;
+}
+
+.macro-footer-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Nutrient Check Banner */
+.nutrient-check-banner {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  transition: var(--transition);
+}
+
+.nutrient-check-banner.ok {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.nutrient-check-banner.warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.nutrient-check-banner.alert {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.nutrient-check-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.nutrient-check-content {
+  flex: 1;
+}
+
+.nutrient-check-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.nutrient-check-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.nutrient-check-advice {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-primary);
+  display: inline-block;
+}
+
+[data-theme="dark"] .nutrient-check-advice {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Food entry macro tags */
+.food-macro-badges {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.15rem;
+}
+
+.macro-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.macro-tag.p {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+.macro-tag.c {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.macro-tag.f {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.meal-macro-summary {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .macro-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 
